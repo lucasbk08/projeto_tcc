@@ -1,0 +1,17 @@
+Árvore de decisão final (CART podada pela regra do 1-SE)
+
+n= 768 
+
+node), split, n, loss, yval, (yprob)
+      * denotes terminal node
+
+1) root 768 268 neg (0.6510417 0.3489583)  
+  2) glucose< 127.5 484  93 neg (0.8078512 0.1921488) *
+  3) glucose>=127.5 284 109 pos (0.3838028 0.6161972)  
+    6) mass< 29.95 76  24 neg (0.6842105 0.3157895) *
+    7) mass>=29.95 208  57 pos (0.2740385 0.7259615) *
+
+Regras (caminho da raiz até cada folha):
+SE glucose< 127.5 ENTÃO sem diabetes (n = 484, P(diabetes) = 0.19)
+SE glucose>=127.5 E mass< 29.95 ENTÃO sem diabetes (n = 76, P(diabetes) = 0.32)
+SE glucose>=127.5 E mass>=29.95 ENTÃO diabetes (n = 208, P(diabetes) = 0.73)

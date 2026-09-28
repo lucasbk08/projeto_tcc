@@ -1,0 +1,140 @@
+==== 1. Dados e análise exploratória ====
+
+== Dataset ==
+Pacientes: 768 | Variáveis preditoras: 8 
+
+neg pos 
+500 268 
+Prevalência de diabetes: 34.9%
+
+== Zeros inválidos por variável ==
+ variavel                  rotulo n_zeros pct_zeros
+  insulin                Insulina     374      48.7
+  triceps Dobra cutânea (tríceps)     227      29.6
+ pressure      Pressão diastólica      35       4.6
+     mass                     IMC      11       1.4
+  glucose                 Glicose       5       0.7
+Pacientes com pelo menos um ausente: 376 | casos completos: 392 
+
+== Média (DP) por grupo ==
+                 variavel         geral  sem_diabetes  com_diabetes ausentes
+                Gestações     3.8 (3.4)     3.3 (3.0)     4.9 (3.7)        0
+                  Glicose  121.7 (30.5)  110.6 (24.8)  142.3 (29.6)        5
+       Pressão diastólica   72.4 (12.4)   70.9 (12.2)   75.3 (12.3)       35
+  Dobra cutânea (tríceps)   29.2 (10.5)   27.2 (10.0)   33.0 (10.3)      227
+                 Insulina 155.5 (118.8) 130.3 (102.5) 206.8 (132.7)      374
+                      IMC    32.5 (6.9)    30.9 (6.6)    35.4 (6.6)       11
+ Histórico familiar (DPF)     0.5 (0.3)     0.4 (0.3)     0.6 (0.4)        0
+                    Idade   33.2 (11.8)   31.2 (11.7)   37.1 (11.0)        0
+ p_valor_wilcox
+       3.75e-08
+       1.31e-40
+       1.63e-06
+       6.96e-10
+       7.48e-14
+       1.82e-17
+       1.20e-06
+       1.14e-17
+
+==== 3. Comparação (objetivos 2, 3 e 4) ====
+
+== Desempenho (média ± DP em 50 folds) — estratégia principal ==
+              modelo           AUC      Acuracia        Sensib       Especif
+   Gradient boosting 0.838 ± 0.045 0.759 ± 0.050 0.534 ± 0.095 0.880 ± 0.053
+ Regressão logística 0.836 ± 0.042 0.767 ± 0.041 0.567 ± 0.078 0.875 ± 0.047
+       Random forest 0.829 ± 0.048 0.757 ± 0.053 0.593 ± 0.081 0.844 ± 0.062
+   Árvore de decisão 0.731 ± 0.063 0.747 ± 0.045 0.565 ± 0.131 0.844 ± 0.070
+            F1         Brier
+ 0.605 ± 0.084 0.159 ± 0.017
+ 0.629 ± 0.067 0.157 ± 0.022
+ 0.630 ± 0.074 0.160 ± 0.021
+ 0.603 ± 0.088 0.185 ± 0.025
+
+== ΔAUC = modelo − regressão logística (teste t corrigido de Nadeau & Bengio) ==
+            modelo delta_AUC             IC95     p supera LR em > 0,05?
+ Árvore de decisão    -0.105 [-0.149; -0.062] 0.000                  não
+     Random forest    -0.007 [-0.028; +0.013] 0.462                  não
+ Gradient boosting    +0.002 [-0.015; +0.019] 0.846                  não
+
+Melhor AUC média (mice): Gradient boosting
+
+== Objetivo 3: perda de AUC ao escolher o modelo interpretável (limite: 0,05) ==
+            melhor       interpretavel perda            IC95    relevante
+ Gradient boosting Regressão logística 0.002 [-0.015; 0.019] não (≤ 0,05)
+ Gradient boosting   Árvore de decisão 0.107  [0.064; 0.150] SIM (> 0,05)
+
+== Efeito do tratamento de ausentes na AUC (média ± DP) ==
+              modelo zeros_mantidos casos_completos mediana  mice
+ Regressão logística          0.831           0.845   0.836 0.836
+   Árvore de decisão          0.714           0.765   0.731 0.731
+       Random forest          0.828           0.849   0.831 0.829
+   Gradient boosting          0.834           0.855   0.838 0.838
+
+==== 4. Interpretabilidade ====
+
+== Regressão logística: odds ratio por +1 DP ==
+                 variavel +1 DP =   OR         IC95      p
+                  Glicose    30.5 3.05 [2.38; 3.90] <0.001
+                      IMC     6.9 1.78 [1.37; 2.32] <0.001
+                Gestações     3.4 1.51 [1.22; 1.87] <0.001
+ Histórico familiar (DPF)     0.3 1.33 [1.10; 1.61] 0.0037
+                    Idade    11.8 1.16 [0.93; 1.45] 0.1974
+  Dobra cutânea (tríceps)    10.4 1.11 [0.86; 1.42] 0.4294
+                 Insulina   113.8 1.00 [0.80; 1.24] 0.9885
+       Pressão diastólica    12.5 0.90 [0.74; 1.11] 0.3432
+
+Árvore final com 3 folhas; regras em resultados/tabelas/04_regras_arvore.txt
+
+== Ranking de importância das variáveis (1 = mais importante) ==
+                 variavel logistica arvore rf gbm
+                  Glicose         1      1  1   1
+                      IMC         2      2  2   2
+                Gestações         3      8  5   6
+ Histórico familiar (DPF)         4      7  7   5
+                    Idade         5      4  3   3
+       Pressão diastólica         6      5  8   8
+  Dobra cutânea (tríceps)         7      6  6   4
+                 Insulina         8      3  4   7
+
+==== Informações da sessão ====
+R version 4.3.3 (2024-02-29)
+Platform: x86_64-pc-linux-gnu (64-bit)
+Running under: Ubuntu 24.04.4 LTS
+
+Matrix products: default
+BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.12.0 
+LAPACK: /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.12.0
+
+locale:
+ [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
+ [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   
+ [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          
+[10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   
+
+time zone: America/Sao_Paulo
+tzcode source: system (glibc)
+
+attached base packages:
+[1] grid      stats     graphics  grDevices utils     datasets  methods  
+[8] base     
+
+other attached packages:
+ [1] partykit_1.2-20      mvtnorm_1.2-4        libcoin_1.0-10      
+ [4] ggplot2_3.4.4        mice_3.16.0          pROC_1.18.5         
+ [7] gbm_2.1.8.1          randomForest_4.7-1.1 rpart_4.1.23        
+[10] mlbench_2.1-3.1     
+
+loaded via a namespace (and not attached):
+ [1] utf8_1.2.4       generics_0.1.3   tidyr_1.3.1      shape_1.4.6     
+ [5] lattice_0.22-5   inum_1.0-5       lme4_1.1-35.1    magrittr_2.0.3  
+ [9] mitml_0.4-5      iterators_1.0.14 foreach_1.5.2    jomo_2.7-6      
+[13] plyr_1.8.9       glmnet_4.1-8     Matrix_1.6-5     nnet_7.3-19     
+[17] backports_1.4.1  Formula_1.2-5    survival_3.5-8   purrr_1.0.2     
+[21] fansi_1.0.5      scales_1.3.0     codetools_0.2-19 cli_3.6.2       
+[25] rlang_1.1.3      munsell_0.5.0    splines_4.3.3    withr_2.5.0     
+[29] pan_1.9          tools_4.3.3      nloptr_2.0.3     minqa_1.2.6     
+[33] dplyr_1.1.4      colorspace_2.1-0 boot_1.3-30      broom_1.0.5     
+[37] vctrs_0.6.5      R6_2.5.1         lifecycle_1.0.4  MASS_7.3-60.0.1 
+[41] pkgconfig_2.0.3  pillar_1.9.0     gtable_0.3.4     glue_1.7.0      
+[45] Rcpp_1.0.12      tibble_3.2.1     tidyselect_1.2.0 farver_2.1.1    
+[49] nlme_3.1-164     labeling_0.4.3   compiler_4.3.3  
