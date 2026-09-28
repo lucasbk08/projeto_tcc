@@ -34,3 +34,83 @@ Valores ausentes: 0 | linhas repetidas (mesmo perfil de respostas): 24206
 
 ==== CDC 2. Validação cruzada (5-fold x 2, 4 modelos) ====
    repetição 1, fold 1/5 ok (4.1 min)
+   repetição 1, fold 2/5 ok (8.6 min)
+   repetição 1, fold 3/5 ok (13.0 min)
+   repetição 1, fold 4/5 ok (17.5 min)
+   repetição 1, fold 5/5 ok (22.0 min)
+   repetição 2, fold 1/5 ok (26.6 min)
+   repetição 2, fold 2/5 ok (31.2 min)
+   repetição 2, fold 3/5 ok (35.6 min)
+   repetição 2, fold 4/5 ok (40.2 min)
+   repetição 2, fold 5/5 ok (44.9 min)
+
+Validação cruzada concluída em 44.9 min.
+Tempo médio por ajuste (s):
+   arvore       gbm logistica        rf 
+       11       196         1        61 
+
+==== CDC 3. Comparação (objetivos 2 e 3 + Pima vs. CDC) ====
+
+== Desempenho no CDC (média ± DP em 10 folds) ==
+              modelo           AUC        AUC-PR         Brier
+   Gradient boosting 0.829 ± 0.001 0.430 ± 0.003 0.097 ± 0.000
+ Regressão logística 0.822 ± 0.001 0.405 ± 0.002 0.099 ± 0.000
+       Random forest 0.822 ± 0.001 0.421 ± 0.003 0.098 ± 0.000
+   Árvore de decisão 0.730 ± 0.008 0.310 ± 0.011 0.106 ± 0.001
+
+Métricas de classe: limiar 0,5 vs. limiar = prevalência do treino (~0,14)
+              modelo Sensib (0,5) Especif (0,5) Sensib (prev) Especif (prev)
+   Gradient boosting        0.193         0.975         0.765          0.736
+ Regressão logística        0.156         0.978         0.768          0.723
+       Random forest        0.145         0.983         0.803          0.685
+   Árvore de decisão        0.115         0.986         0.681          0.706
+
+== ΔAUC = modelo − regressão logística (teste t corrigido de Nadeau & Bengio) ==
+            modelo delta_AUC               IC95      p vence em % dos folds
+ Árvore de decisão   -0.0922 [-0.1030; -0.0813] 0.0000                   0%
+     Random forest   -0.0002 [-0.0019; +0.0015] 0.8032                  40%
+ Gradient boosting   +0.0073 [+0.0061; +0.0086] 0.0000                 100%
+ supera LR em > 0,05?
+                  não
+                  não
+                  não
+
+== Objetivo 3: perda de AUC ao trocar Gradient boosting pelo interpretável (limite: 0,05) ==
+       interpretavel  perda             IC95    relevante
+ Regressão logística 0.0073 [0.0061; 0.0086] não (≤ 0,05)
+   Árvore de decisão 0.0995 [0.0886; 0.1103] SIM (> 0,05)
+
+== Pima vs. CDC: AUC média (e diferença para a logística) ==
+              modelo Pima (n = 768) CDC (n = 253.680)
+   Gradient boosting          0,838             0,829
+ Regressão logística          0,836             0,822
+       Random forest          0,829             0,822
+   Árvore de decisão          0,731             0,730
+
+==== CDC 4. Interpretabilidade ====
+
+== Regressão logística (CDC): odds ratios ==
+                           variavel           unidade   OR         IC95      p
+         Checou colesterol (5 anos)       sim vs. não 3.47 [3.03; 3.97] <0,001
+                       Pressão alta       sim vs. não 2.13 [2.07; 2.20] <0,001
+                    Colesterol alto       sim vs. não 1.78 [1.74; 1.83] <0,001
+ Saúde geral (1 excelente … 5 ruim)          +1 nível 1.71 [1.68; 1.74] <0,001
+                                IMC          +5 kg/m² 1.36 [1.34; 1.37] <0,001
+                     Sexo masculino       sim vs. não 1.29 [1.26; 1.33] <0,001
+          Doença cardíaca / infarto       sim vs. não 1.25 [1.20; 1.29] <0,001
+                         AVC prévio       sim vs. não 1.14 [1.09; 1.20] <0,001
+ Faixa etária (13 faixas de 5 anos) +1 faixa (5 anos) 1.13 [1.13; 1.14] <0,001
+             Dificuldade para andar       sim vs. não 1.13 [1.09; 1.17] <0,001
+             Tem cobertura de saúde       sim vs. não 1.09 [1.02; 1.16]  0,014
+   Deixou de ir ao médico por custo       sim vs. não 1.02 [0.97; 1.07]  0,436
+   Fumante (≥ 100 cigarros na vida)       sim vs. não 0.99 [0.96; 1.02]  0,431
+                 Escolaridade (1–6)          +1 nível 0.97 [0.96; 0.98] <0,001
+              Come verdura todo dia       sim vs. não 0.97 [0.94; 1.00]  0,037
+   Dias de saúde mental ruim (30 d)          +10 dias 0.96 [0.95; 0.98] <0,001
+                Come fruta todo dia       sim vs. não 0.95 [0.93; 0.98] <0,001
+                        Renda (1–8)          +1 faixa 0.95 [0.94; 0.96] <0,001
+         Atividade física (30 dias)       sim vs. não 0.95 [0.92; 0.98] <0,001
+   Dias de saúde física ruim (30 d)          +10 dias 0.93 [0.91; 0.94] <0,001
+           Consumo pesado de álcool       sim vs. não 0.46 [0.43; 0.50] <0,001
+
+Árvore final com 6 folhas; regras em resultados/cdc/tabelas/04_regras_arvore.txt 
