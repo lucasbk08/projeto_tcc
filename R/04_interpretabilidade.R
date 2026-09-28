@@ -4,7 +4,7 @@
 # Os modelos finais são ajustados com TODOS os 768 pacientes (estratégia
 # principal de ausentes). Aqui não se mede desempenho (isso é papel da CV),
 # só se inspeciona o raciocínio de cada modelo.
-#   - Regressão logística: odds ratios por 1 desvio-padrão, com IC 95%
+#   - Regressão logística: odds ratios por 1 desvio-padrão, IC 95% por imputação múltipla
 #   - Árvore de decisão: a própria árvore + regras em texto
 #   - Random forest: importância por permutação (queda de acurácia)
 #   - Gradient boosting: influência relativa
@@ -12,36 +12,62 @@
 #   resultados/tabelas/04_odds_ratios.csv
 #   resultados/tabelas/04_regras_arvore.txt
 #   resultados/tabelas/04_importancia_variaveis.csv
+#   resultados/tabelas/04_criterios_interpretabilidade.csv
 #   resultados/figuras/04_odds_ratios.png
 #   resultados/figuras/04_arvore_decisao.png
 #   resultados/figuras/04_importancia_variaveis.png
+#   resultados/figuras/04_equilibrio.png
 #   resultados/modelos/modelos_finais.rds
 # =============================================================================
 
 set.seed(SEMENTE)
 completo <- ESTRATEGIAS[[ESTRATEGIA_PRINCIPAL]](pima, pima[0, ])$treino
 
-# ---- Regressão logística (preditores padronizados) ---------------------------
-# Padronizar deixa os odds ratios comparáveis: "quanto a chance de diabetes
-# muda quando a variável sobe 1 desvio-padrão".
+# ---- Regressão logística: odds ratios com imputação múltipla -----------------
+# Imputar uma vez só e tratar os valores estimados como se tivessem sido
+# medidos deixa os ICs estreitos demais. Aqui se usa imputação múltipla:
+# 20 bases imputadas, uma regressão em cada, e os resultados combinados pelas
+# regras de Rubin (mice::pool), que somam a incerteza da imputação ao IC.
+# Diferente da CV (predição, em que o diagnóstico do teste é desconhecido),
+# aqui o objetivo é ESTIMAR associações, e a resposta entra no modelo de
+# imputação; sem ela, os OR ficariam puxados para 1 (Moons et al., 2006).
+# Unidade: +1 desvio-padrão observado, para os OR serem comparáveis entre si.
 vars <- names(ROTULOS_VARS)
-padron <- completo
-padron[vars] <- scale(completo[vars])
-glm_final <- glm(diabetes ~ ., data = padron, family = binomial)
-ic <- suppressMessages(confint.default(glm_final))
+pima_na <- zeros_para_na(pima)
+dp_obs <- sapply(pima_na[vars], sd, na.rm = TRUE)
+imp_or <- mice(pima_na, m = 20, maxit = 10, method = "pmm", printFlag = FALSE,
+               seed = SEMENTE)
+ajustes_or <- lapply(complete(imp_or, "all"), function(d) {
+  d[vars] <- sweep(d[vars], 2, dp_obs, "/")
+  glm(diabetes ~ ., data = d, family = binomial)
+})
+combinado <- summary(pool(as.mira(ajustes_or)), conf.int = TRUE)
+combinado <- combinado[match(vars, combinado$term), ]
 or <- data.frame(
-  variavel  = names(coef(glm_final))[-1],
-  rotulo    = ROTULOS_VARS[names(coef(glm_final))[-1]],
-  dp_original = sapply(completo[vars], sd)[names(coef(glm_final))[-1]],
-  odds_ratio = exp(coef(glm_final))[-1],
-  ic95_inf   = exp(ic[-1, 1]),
-  ic95_sup   = exp(ic[-1, 2]),
-  p_valor    = summary(glm_final)$coefficients[-1, 4],
-  row.names = NULL
+  variavel    = vars,
+  rotulo      = ROTULOS_VARS[vars],
+  dp_original = dp_obs[vars],
+  odds_ratio  = exp(combinado$estimate),
+  ic95_inf    = exp(combinado[["2.5 %"]]),
+  ic95_sup    = exp(combinado[["97.5 %"]]),
+  p_valor     = combinado$p.value,
+  row.names   = NULL
 )
+
+# Comparação com a imputação única (o método anterior): quanto o IC alarga
+unica <- completo; unica[vars] <- sweep(unica[vars], 2, dp_obs, "/")
+ic_unica <- suppressMessages(confint.default(glm(diabetes ~ ., data = unica,
+                                                 family = binomial)))[vars, ]
+largura_mi    <- combinado[["97.5 %"]] - combinado[["2.5 %"]]
+largura_unica <- ic_unica[, 2] - ic_unica[, 1]
+cat(sprintf("\nIC (escala log) com imputação múltipla é em média %.0f%% mais largo que com imputação única\n",
+            100 * (mean(largura_mi / largura_unica) - 1)))
+
+# Modelo final para uso preditivo (unidades originais, base imputada única)
+glm_final <- glm(diabetes ~ ., data = completo, family = binomial)
 or <- or[order(-or$odds_ratio), ]
 write.csv(or, file.path(DIR_TABELAS, "04_odds_ratios.csv"), row.names = FALSE)
-cat("\n== Regressão logística: odds ratio por +1 DP ==\n")
+cat("\n== Regressão logística: odds ratio por +1 DP (imputação múltipla, m = 20) ==\n")
 print(data.frame(variavel = or$rotulo,
                  `+1 DP =` = sprintf("%.1f", or$dp_original),
                  OR = sprintf("%.2f", or$odds_ratio),
@@ -53,15 +79,15 @@ or$rotulo_f <- factor(or$rotulo, levels = rev(or$rotulo))
 or$signif <- ifelse(or$p_valor < 0.05, "p < 0,05", "p ≥ 0,05")
 g_or <- ggplot(or, aes(x = odds_ratio, y = rotulo_f)) +
   geom_vline(xintercept = 1, linetype = "dashed", colour = "#b5b4ad") +
-  geom_errorbarh(aes(xmin = ic95_inf, xmax = ic95_sup), height = 0.25,
-                 colour = "#2a78d6", linewidth = 0.6) +
+  geom_errorbar(aes(xmin = ic95_inf, xmax = ic95_sup), width = 0.25, orientation = "y",
+                colour = "#2a78d6", linewidth = 0.6) +
   geom_point(aes(shape = signif), size = 3, colour = "#2a78d6", fill = "white", stroke = 1.2) +
   geom_text(aes(x = ic95_sup, label = sprintf("%.2f", odds_ratio)), hjust = -0.3,
             size = 3.8, colour = "#0b0b0b") +
   scale_x_log10(expand = expansion(mult = c(0.05, 0.12))) +
   scale_shape_manual(values = c("p < 0,05" = 16, "p ≥ 0,05" = 21)) +
   labs(title = "Regressão logística: odds ratio por +1 desvio-padrão",
-       subtitle = "IC 95%; OR > 1 aumenta a chance de diabetes (escala log)",
+       subtitle = "IC 95% por imputação múltipla (m = 20) · OR > 1 aumenta a chance · escala log",
        x = "Odds ratio", y = NULL, shape = NULL) +
   tema_tcc()
 ggsave(file.path(DIR_FIGURAS, "04_odds_ratios.png"), g_or, width = 8, height = 4.8, dpi = 300)
@@ -118,7 +144,7 @@ imp_gbm <- summary(gbm_final, n.trees = gbm_final$melhor_n, plotit = FALSE)
 imp_gbm <- setNames(imp_gbm$rel.inf, imp_gbm$var)
 imp_arv <- arvore_final$variable.importance
 imp_arv <- setNames(imp_arv[vars], vars); imp_arv[is.na(imp_arv)] <- 0
-imp_lr  <- setNames(abs(summary(glm_final)$coefficients[vars, "z value"]), vars)
+imp_lr  <- setNames(abs(combinado$statistic), vars)   # |t| combinado das 20 imputações
 
 normaliza <- function(x) 100 * x / max(x)
 importancia <- rbind(
@@ -149,11 +175,94 @@ g_imp <- ggplot(importancia, aes(x = relativa, y = var_f, fill = modelo)) +
   scale_fill_manual(values = CORES_MODELOS, guide = "none") +
   scale_x_continuous(breaks = c(0, 50, 100)) +
   labs(title = "Importância relativa das variáveis em cada modelo",
-       subtitle = "100 = variável mais importante do modelo · logística: |z|; árvore: redução de impureza; RF: permutação; GBM: influência relativa",
+       subtitle = "100 = variável mais importante do modelo · logística: |t| combinado; árvore: redução de impureza; RF: permutação; GBM: influência relativa",
        x = "Importância relativa", y = NULL) +
   tema_tcc(12) + theme(panel.spacing = unit(1.2, "lines"),
                        plot.subtitle = element_text(size = 9))
 ggsave(file.path(DIR_FIGURAS, "04_importancia_variaveis.png"), g_imp, width = 11, height = 4.5, dpi = 300)
+
+# ---- Critérios de interpretabilidade (objetivo central: o "equilíbrio") -----
+# O desempenho tem número (AUC); aqui a interpretabilidade também ganha:
+#   tamanho do modelo  = quantos elementos alguém precisaria ler para entender
+#                        o modelo inteiro (coeficientes ou nós das árvores)
+#   variáveis usadas   = quantas variáveis o modelo de fato consulta
+# e três critérios práticos, iguais para todos os modelos:
+#   cálculo à mão      = um profissional consegue obter o risco sem computador?
+#   direção do efeito  = dá para saber se a variável AUMENTA ou REDUZ o risco?
+#   explicação individual = dá para dizer POR QUE este paciente recebeu este risco?
+nos_arvore <- nrow(arvore_final$frame)
+nos_rf     <- sum(rf_final$forest$ndbigtree)
+divisoes_gbm <- sum(vapply(seq_len(gbm_final$melhor_n), function(i)
+  sum(pretty.gbm.tree(gbm_final, i.tree = i)$SplitVar != -1), numeric(1)))
+nos_gbm    <- 2 * divisoes_gbm + gbm_final$melhor_n   # divisões + folhas
+vars_arvore <- setdiff(unique(as.character(arvore_final$frame$var)), "<leaf>")
+
+resumo_auc <- read.csv(file.path(DIR_TABELAS, "03_resumo_desempenho.csv"))
+resumo_auc <- resumo_auc[resumo_auc$estrategia == ESTRATEGIA_PRINCIPAL, ]
+auc_de <- setNames(resumo_auc$auc_media, resumo_auc$modelo)
+dp_de  <- setNames(resumo_auc$auc_dp, resumo_auc$modelo)
+
+criterios <- data.frame(
+  modelo = names(ROTULOS_MODELOS),
+  auc_media = auc_de[names(ROTULOS_MODELOS)],
+  auc_dp    = dp_de[names(ROTULOS_MODELOS)],
+  perda_vs_melhor = max(auc_de) - auc_de[names(ROTULOS_MODELOS)],
+  tamanho_modelo = c(length(coef(glm_final)), nos_arvore, nos_rf, nos_gbm),
+  unidade_tamanho = c("coeficientes",
+                      sprintf("nós (%d perguntas, %d folhas)",
+                              sum(arvore_final$frame$var != "<leaf>"),
+                              sum(arvore_final$frame$var == "<leaf>")),
+                      sprintf("nós em %d árvores", rf_final$ntree),
+                      sprintf("nós em %d árvores", gbm_final$melhor_n)),
+  variaveis_usadas = c(length(vars), length(vars_arvore),
+                       sum(imp_rf[vars] > 0), sum(imp_gbm[vars] > 0)),
+  calculo_a_mao = c("Sim: soma de 9 termos na fórmula logística",
+                    sprintf("Sim: até %d perguntas sim/não",
+                            max(floor(log2(as.integer(rownames(arvore_final$frame)))))),
+                    "Não", "Não"),
+  direcao_do_efeito = c("Sim, com magnitude e IC 95% (odds ratio)",
+                        "Parcial: só nas variáveis usadas, por limiar",
+                        "Não: a importância não tem sinal",
+                        "Não: a importância não tem sinal"),
+  explicacao_individual = c("Sim: contribuição de cada variável",
+                            "Sim: o caminho até a folha",
+                            "Não sem ferramenta pós-hoc (ex.: SHAP)",
+                            "Não sem ferramenta pós-hoc (ex.: SHAP)"),
+  row.names = NULL
+)
+write.csv(criterios, file.path(DIR_TABELAS, "04_criterios_interpretabilidade.csv"), row.names = FALSE)
+cat("\n== Desempenho x interpretabilidade (objetivo central) ==\n")
+print(data.frame(modelo = ROTULOS_MODELOS[criterios$modelo],
+                 AUC = sprintf("%.3f", criterios$auc_media),
+                 perda = sprintf("%.3f", criterios$perda_vs_melhor),
+                 tamanho = format(criterios$tamanho_modelo, big.mark = " "),
+                 vars = criterios$variaveis_usadas,
+                 `à mão` = sub(":.*", "", criterios$calculo_a_mao),
+                 `direção` = sub(":.*|,.*", "", criterios$direcao_do_efeito),
+                 `explica paciente` = ifelse(startsWith(criterios$explicacao_individual, "Sim"), "Sim", "Não"),
+                 check.names = FALSE), row.names = FALSE)
+
+criterios$rotulo <- sprintf("%s\n%s %s", ROTULOS_MODELOS[criterios$modelo],
+                            format(criterios$tamanho_modelo, big.mark = ".", decimal.mark = ","),
+                            ifelse(criterios$modelo == "logistica", "coeficientes", "nós"))
+g_eq <- ggplot(criterios, aes(x = tamanho_modelo, y = auc_media, colour = modelo)) +
+  annotate("rect", xmin = 1, xmax = 1e7, ymin = max(criterios$auc_media) - DELTA_AUC_RELEVANTE,
+           ymax = max(criterios$auc_media), fill = "#e8f2fc", alpha = 0.7) +
+  annotate("text", x = 150, y = max(criterios$auc_media) - DELTA_AUC_RELEVANTE + 0.006,
+           label = "faixa de perda ≤ 0,05 (não relevante)", colour = "#2a78d6", size = 3.4) +
+  geom_errorbar(aes(ymin = auc_media - auc_dp, ymax = auc_media + auc_dp), width = 0.08,
+                linewidth = 0.6) +
+  geom_point(size = 3.5) +
+  geom_text(aes(label = rotulo), nudge_x = 0.12, hjust = 0, size = 3.4, lineheight = 0.9,
+            colour = "#0b0b0b") +
+  scale_x_log10(breaks = 10^(0:5), labels = c("1", "10", "100", "1.000", "10.000", "100.000")) +
+  coord_cartesian(xlim = c(3, 6e5)) +
+  scale_colour_manual(values = CORES_MODELOS, guide = "none") +
+  labs(title = "Desempenho × tamanho do modelo",
+       subtitle = "AUC-ROC média ± 1 DP (CV 10×5, MICE) · eixo x: quantos elementos seria preciso ler para entender o modelo (escala log)",
+       x = "Tamanho do modelo (coeficientes ou nós de árvore)", y = "AUC-ROC") +
+  tema_tcc() + theme(plot.subtitle = element_text(size = 9.5))
+ggsave(file.path(DIR_FIGURAS, "04_equilibrio.png"), g_eq, width = 9, height = 5, dpi = 300)
 
 saveRDS(list(logistica = glm_final, arvore = arvore_final, rf = rf_final, gbm = gbm_final,
              dados = completo),

@@ -297,10 +297,12 @@ Total: 4 × 5 × 10 × 4 = **800 linhas de resultado**.
 | **Objetivo 2** | Os ensembles (RF, GBM) superam a logística? | Compara fold a fold a AUC de cada modelo com a da logística e aplica o teste t corrigido. | `03_logistica_vs_modelos.csv` |
 | **Objetivo 3** | Quanto se perde ao trocar o melhor modelo por um interpretável? | Pega o modelo de maior AUC e mede a perda ao trocá-lo pela logística e pela árvore. A perda é "relevante" se passar de 0,05. | `03_objetivo3_perda_interpretabilidade.csv` |
 | **Objetivo 4** | O jeito de tratar faltantes muda o resultado? | Compara cada estratégia com a linha de base (zeros mantidos). Também mede a **estabilidade**: variação da AUC entre folds. | `03_efeito_ausentes.csv` |
+| **Triagem** | Se exigirmos encontrar 80% dos diabéticos, quantos saudáveis cada modelo ainda libera corretamente? | Em cada fold, acha na curva ROC a maior especificidade com sensibilidade ≥ 80% e compara com a logística. | `03_triagem_sens80.csv` |
+| **Calibração** | Quando o modelo diz "30% de risco", cerca de 30% desses pacientes têm mesmo diabetes? | Intercepto (ideal 0) e inclinação (ideal 1) de calibração, mais a curva de calibração por decis. | `03_calibracao.csv` |
 
 > A estratégia "casos completos" usa só 392 pacientes, então a comparação dela com as outras é **apenas descritiva**, sem teste estatístico. Não é justo comparar provas feitas com turmas diferentes.
 
-**Figuras:** `03_auc_por_modelo.png`, `03_curvas_roc.png`, `03_estrategias_ausentes.png`.
+**Figuras:** `03_auc_por_modelo.png`, `03_curvas_roc.png`, `03_estrategias_ausentes.png`, `03_calibracao.png`.
 
 ---
 
@@ -312,14 +314,26 @@ Total: 4 × 5 × 10 × 4 = **800 linhas de resultado**.
 
 | Modelo | Como é explicado | Leitura |
 |---|---|---|
-| Regressão logística | **Odds ratio por +1 desvio-padrão** | "Se a glicose sobe ~30 mg/dL, a chance de diabetes fica 3× maior." As variáveis são padronizadas antes, para que os números sejam comparáveis entre si. |
+| Regressão logística | **Odds ratio por +1 desvio-padrão** | "Se a glicose sobe ~30 mg/dL, a chance de diabetes fica 3× maior." As variáveis são divididas pelo desvio-padrão, para que os números sejam comparáveis entre si. O IC 95% vem de **imputação múltipla**: 20 versões dos dados preenchidos, uma regressão em cada, resultados combinados. Assim, o IC também carrega a incerteza de não saber os valores faltantes. |
 | Árvore de decisão | **A própria árvore** + regras em texto | "SE glicose ≥ 127,5 E IMC ≥ 29,95 ENTÃO diabetes (73%)." |
 | Random forest | **Importância por permutação** | Embaralha uma variável e mede quanto o modelo piora. Quanto mais piora, mais importante é a variável. |
 | Gradient boosting | **Influência relativa** | Quanto cada variável contribuiu para as divisões das árvores. |
 
 No final, todas as importâncias são colocadas na mesma escala (**100 = a variável mais importante daquele modelo**). Assim dá para ver se os 4 modelos concordam.
 
-**Saídas:** `04_odds_ratios.csv`, `04_regras_arvore.txt`, `04_importancia_variaveis.csv`, as três figuras `04_*.png` e `resultados/modelos/modelos_finais.rds`.
+**Critérios de interpretabilidade (objetivo central).** Para que o "equilíbrio" da pergunta de pesquisa tenha número dos dois lados, o script mede para cada modelo:
+
+| Critério | Pergunta |
+|---|---|
+| Tamanho do modelo | Quantos elementos (coeficientes ou nós de árvore) alguém teria de ler para entender o modelo inteiro? |
+| Variáveis usadas | Quantas variáveis o modelo realmente consulta? |
+| Cálculo à mão | Um profissional consegue obter o risco sem computador? |
+| Direção do efeito | Dá para saber se a variável aumenta ou reduz o risco, e quanto? |
+| Explicação individual | Dá para dizer por que *este* paciente recebeu *este* risco? |
+
+Esses critérios são juntados à AUC de cada modelo na figura `04_equilibrio.png`.
+
+**Saídas:** `04_odds_ratios.csv`, `04_regras_arvore.txt`, `04_importancia_variaveis.csv`, `04_criterios_interpretabilidade.csv`, as quatro figuras `04_*.png` e `resultados/modelos/modelos_finais.rds`.
 
 ---
 
@@ -337,8 +351,11 @@ No final, todas as importâncias são colocadas na mesma escala (**100 = a vari�
 | `03_logistica_vs_modelos.csv` | estratégia × modelo comparado | `diferenca_media` (modelo − logística), `ic95_inf/sup`, `p_valor`, `folds_modelo_vence` |
 | `03_objetivo3_perda_interpretabilidade.csv` | estratégia × modelo interpretável | `perda_auc`, IC 95%, `perda_relevante` (> 0,05?) |
 | `03_efeito_ausentes.csv` | modelo × estratégia | `auc_media`, `auc_dp`, `coef_variacao` (estabilidade), `delta_vs_zeros`, `p_valor` |
+| `03_triagem_sens80.csv` | um modelo | `especificidade_media/dp` com sensibilidade ≥ 80%, `delta_vs_logistica`, `p_valor` |
+| `03_calibracao.csv` | um modelo | `intercepto_media/dp` (ideal 0), `inclinacao_media/dp` (ideal 1), `brier_media` |
 | `04_odds_ratios.csv` | uma variável | `odds_ratio`, IC 95%, `p_valor`, `dp_original` (quanto vale "+1 DP") |
 | `04_importancia_variaveis.csv` | modelo × variável | `bruto`, `relativa` (0 a 100), `ranking` |
+| `04_criterios_interpretabilidade.csv` | um modelo | `auc_media`, `perda_vs_melhor`, `tamanho_modelo`, `variaveis_usadas` e os três critérios práticos |
 | `04_regras_arvore.txt` | — | a árvore final e as regras "SE... ENTÃO..." |
 
 ### Figuras (`resultados/figuras/`)
@@ -353,6 +370,8 @@ No final, todas as importâncias são colocadas na mesma escala (**100 = a vari�
 | `04_odds_ratios.png` | Odds ratios da regressão logística com IC 95%. |
 | `04_arvore_decisao.png` | Desenho da árvore final. |
 | `04_importancia_variaveis.png` | Importância das variáveis, lado a lado nos 4 modelos. |
+| `03_calibracao.png` | Risco previsto × proporção real de diabéticos, por decis, em cada modelo. |
+| `04_equilibrio.png` | AUC × tamanho do modelo: a resposta visual à pergunta de pesquisa. |
 
 ---
 
@@ -393,6 +412,8 @@ No final, todas as importâncias são colocadas na mesma escala (**100 = a vari�
 | **Sensibilidade** | % dos doentes que o modelo detectou. |
 | **Especificidade** | % dos saudáveis que o modelo classificou como saudáveis. |
 | **Brier** | Erro médio das probabilidades. 0 = perfeito. |
+| **Calibração** | Se as probabilidades "valem o que dizem": dos pacientes com 30% de risco previsto, ~30% devem ter diabetes. Inclinação < 1 = o modelo exagera os riscos; > 1 = é tímido demais. |
+| **Imputação múltipla** | Preencher os faltantes várias vezes (aqui, 20), analisar cada versão e combinar os resultados. O IC final inclui a incerteza sobre os valores preenchidos. |
 | **Odds ratio (OR)** | Quantas vezes a chance de diabetes é multiplicada quando a variável aumenta. OR = 1: sem efeito; > 1: aumenta o risco; < 1: diminui. |
 | **Intervalo de confiança 95% (IC)** | Faixa em que o valor verdadeiro provavelmente está. Se o IC de uma diferença inclui 0, não dá para afirmar que há diferença. |
 | **p-valor** | Abaixo de 0,05, a diferença dificilmente é só sorte. |

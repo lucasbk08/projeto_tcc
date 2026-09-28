@@ -83,8 +83,46 @@ docs/                          rascunhos de texto para o Projeto Completo e o p�
 Os métodos ensemble **não** superaram a regressão logística de forma significativa (RF − LR = −0,007, p = 0,46;
 GBM − LR = +0,002, p = 0,85). O resultado se repete nas quatro estratégias de ausentes.
 **A regressão logística entrega o melhor equilíbrio**: desempenho equivalente ao melhor ensemble,
-melhor calibração (menor Brier) e coeficientes diretamente interpretáveis. A árvore podada é a mais simples
+boa calibração e coeficientes diretamente interpretáveis. A árvore podada é a mais simples
 de ler (3 regras), mas perde desempenho de forma clinicamente relevante.
+
+### Objetivo central: desempenho × interpretabilidade
+
+Para que o "equilíbrio" não fique só no argumento, a interpretabilidade também foi medida com critérios
+explícitos, iguais para os quatro modelos (`resultados/tabelas/04_criterios_interpretabilidade.csv`):
+
+| Modelo | AUC | Perda vs. melhor | Tamanho do modelo | Variáveis usadas | Cálculo à mão? | Direção do efeito? | Explica cada paciente? |
+|---|---|---|---|---|---|---|---|
+| Regressão logística | 0,836 | 0,002 | **9** coeficientes | 8 | Sim | Sim, com IC 95% | Sim |
+| Árvore de decisão | 0,731 | 0,107 | **5** nós (2 perguntas, 3 folhas) | 2 | Sim | Parcial | Sim |
+| Random forest | 0,829 | 0,009 | 124.748 nós | 8 | Não | Não | Não* |
+| Gradient boosting | 0,838 | — | 1.589 nós | 7 | Não | Não | Não* |
+
+\* só com ferramentas pós-hoc, como SHAP.
+
+A logística é o **único** modelo que fica dentro da faixa de perda não relevante (≤ 0,05) **e** atende aos três
+critérios práticos. Ela tem 9 números a ler, contra 1.589 do GBM e 124.748 da random forest. Isso apoia empiricamente
+a tese de Rudin (2019): neste problema, o modelo transparente não custa desempenho.
+
+![Desempenho × tamanho do modelo](resultados/figuras/04_equilibrio.png)
+
+### Triagem e calibração
+
+**Triagem.** Com o limiar de 0,5, a sensibilidade fica perto de 57%, pouco para triagem. Fixando a sensibilidade em
+**80%**, a especificidade é de 0,69 na logística, 0,72 na RF e 0,73 no GBM. As diferenças para a logística não são
+significativas (p = 0,34 e 0,23). Com 3 folhas, a árvore não tem um ponto de corte intermediário e cai para 0,17.
+Esse é um ponto da curva ROC de cada fold, e não um limiar pronto para uso clínico (`03_triagem_sens80.csv`).
+
+**Calibração.** Intercepto e inclinação de calibração medidos nas predições fora-do-fold (ideal: 0 e 1):
+
+| Modelo | Intercepto | Inclinação | Leitura |
+|---|---|---|---|
+| Regressão logística | −0,002 | 0,93 | bem calibrada, levemente extrema |
+| Random forest | −0,014 | 1,00 | bem calibrada |
+| Gradient boosting | −0,001 | **1,37** | probabilidades "tímidas" demais (comprimidas perto da média) |
+| Árvore de decisão | +0,002 | 0,76 | extrema demais, com só 3 níveis de risco |
+
+![Calibração](resultados/figuras/03_calibracao.png)
 
 ### Objetivo 4: tratamento dos valores ausentes (AUC média)
 
@@ -104,7 +142,9 @@ diferença pareada foi significativa. A árvore de decisão é o modelo mais sen
 ### Interpretabilidade
 
 Glicose e IMC são as duas variáveis mais importantes **nos quatro modelos**. Na regressão logística,
-+1 DP de glicose (≈ 30 mg/dL) triplica a chance de diabetes (OR = 3,05; IC 95% 2,38–3,90).
++1 DP de glicose (≈ 30 mg/dL) triplica a chance de diabetes (OR = 3,28; IC 95% 2,45–4,38).
+Os ICs dos odds ratios vêm de **imputação múltipla** (20 bases, regras de Rubin). Com uma imputação só, eles
+ficariam em média 13% mais estreitos do que deveriam.
 A árvore final resume o problema em 3 regras: glicose ≥ 127,5 **e** IMC ≥ 29,95 → risco de 73%.
 
 | Odds ratios | Árvore final |
@@ -154,6 +194,8 @@ conclusão do Pima se mantém numa base 330× maior. Detalhes do desenho em [REA
 | `04_odds_ratios.png` | **pôster: interpretabilidade** |
 | `04_arvore_decisao.png` | pôster/projeto |
 | `04_importancia_variaveis.png` | projeto: concordância entre modelos |
+| `04_equilibrio.png` | **pôster: resposta à pergunta de pesquisa** (desempenho × tamanho do modelo) |
+| `03_calibracao.png` | projeto: calibração dos quatro modelos |
 | `cdc/03_pima_vs_cdc.png` | **pôster: a conclusão se repete em larga escala** |
 | `cdc/03_auc_por_modelo.png` | projeto: desempenho no CDC (AUC-ROC e AUC-PR) |
 | `cdc/01_prevalencia_por_fator.png`, `cdc/04_*.png` | projeto: exploração e interpretabilidade no CDC |
@@ -163,7 +205,10 @@ conclusão do Pima se mantém numa base 330× maior. Detalhes do desenho em [REA
 - Pima é pequeno (768) e específico (mulheres ≥ 21 anos de origem Pima); a generalização é limitada.
 - Hiperparâmetros fixos e documentados, sem busca em grade (evita otimismo, mas pode subestimar RF/GBM).
 - Limiar de 0,5 privilegia especificidade; em triagem, um limiar menor aumentaria a sensibilidade.
-- MICE com uma única imputação dentro de cada fold (m = 1), por custo computacional.
+- Na validação cruzada, o MICE usa uma única imputação por fold (m = 1), por custo computacional. Os odds ratios
+  finais usam imputação múltipla (m = 20).
+- Os critérios de interpretabilidade são escolhas do grupo (tamanho do modelo, cálculo à mão, direção do
+  efeito, explicação individual); não há métrica única consagrada na literatura.
 - CDC: variáveis autodeclaradas e alvo que junta pré-diabetes e diabetes; levantamento transversal, sem leitura causal.
 - CDC: no modelo final, o GBM usou o máximo de 1500 árvores (o erro OOB ainda caía). Com mais árvores,
   o GBM poderia ganhar um pouco mais, e a vantagem sobre a logística ficaria ligeiramente maior.

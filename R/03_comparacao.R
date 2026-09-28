@@ -8,6 +8,9 @@
 #   resultados/tabelas/03_resumo_desempenho.csv
 #   resultados/tabelas/03_logistica_vs_modelos.csv
 #   resultados/tabelas/03_efeito_ausentes.csv
+#   resultados/tabelas/03_triagem_sens80.csv
+#   resultados/tabelas/03_calibracao.csv
+#   resultados/figuras/03_calibracao.png
 #   resultados/figuras/03_auc_por_modelo.png
 #   resultados/figuras/03_curvas_roc.png
 #   resultados/figuras/03_estrategias_ausentes.png
@@ -142,6 +145,106 @@ tab4 <- reshape(efeito[, c("modelo", "estrategia", "auc_media")], idvar = "model
 names(tab4) <- sub("auc_media.", "", names(tab4))
 tab4$modelo <- ROTULOS_MODELOS[tab4$modelo]
 print(format(tab4, digits = 3), row.names = FALSE)
+
+# ---- Triagem: especificidade com sensibilidade fixada em 80% ----------------
+# Com limiar 0,5 a sensibilidade fica perto de 57%: 4 em cada 10 diabéticos
+# passariam despercebidos, pouco para uma triagem. Aqui cada modelo é avaliado
+# no ponto de operação de triagem: a maior especificidade possível mantendo a
+# sensibilidade >= 80%. É um ponto da curva ROC de cada fold (como a AUC, é
+# uma propriedade do modelo), e não um limiar pronto para uso clínico, que
+# precisaria ser escolhido e validado em dados separados.
+SENS_TRIAGEM <- 0.80
+espec_na_sens <- function(y, p, alvo = SENS_TRIAGEM) {
+  ro <- pROC::roc(y == "pos", p, quiet = TRUE, levels = c(FALSE, TRUE), direction = "<")
+  max(ro$specificities[ro$sensitivities >= alvo])
+}
+pm <- preds[preds$estrategia == ESTRATEGIA_PRINCIPAL, ]
+tri_folds <- do.call(rbind, lapply(
+  split(pm, list(pm$modelo, pm$repeticao, pm$fold), drop = TRUE), function(d)
+    data.frame(modelo = d$modelo[1], repeticao = d$repeticao[1], fold = d$fold[1],
+               especificidade = espec_na_sens(d$y, d$prob))))
+n_tr <- mean(res_folds$n_treino[res_folds$estrategia == ESTRATEGIA_PRINCIPAL])
+n_te <- mean(res_folds$n_teste[res_folds$estrategia == ESTRATEGIA_PRINCIPAL])
+lr_tri <- tri_folds[tri_folds$modelo == "logistica", ]
+triagem <- do.call(rbind, lapply(names(MODELOS), function(mod) {
+  d <- tri_folds[tri_folds$modelo == mod, ]
+  d <- d[match(paste(lr_tri$repeticao, lr_tri$fold), paste(d$repeticao, d$fold)), ]
+  linha <- data.frame(modelo = mod, sensibilidade_fixada = SENS_TRIAGEM,
+                      especificidade_media = mean(d$especificidade),
+                      especificidade_dp = sd(d$especificidade))
+  if (mod == "logistica") {
+    linha$delta_vs_logistica <- 0; linha$p_valor <- NA
+  } else {
+    tt <- teste_t_corrigido(d$especificidade - lr_tri$especificidade, n_tr, n_te)
+    linha$delta_vs_logistica <- tt$diferenca_media; linha$p_valor <- tt$p_valor
+  }
+  linha
+}))
+write.csv(triagem, file.path(DIR_TABELAS, "03_triagem_sens80.csv"), row.names = FALSE)
+cat(sprintf("\n== Triagem: especificidade com sensibilidade >= %.0f%% (%s) ==\n",
+            100 * SENS_TRIAGEM, ESTRATEGIA_PRINCIPAL))
+print(data.frame(
+  modelo = ROTULOS_MODELOS[triagem$modelo],
+  Especificidade = fmt(triagem$especificidade_media, triagem$especificidade_dp),
+  `Δ vs. logística` = ifelse(triagem$modelo == "logistica", "—",
+                             sprintf("%+.3f (p = %.2f)", triagem$delta_vs_logistica, triagem$p_valor)),
+  check.names = FALSE), row.names = FALSE)
+
+# ---- Calibração: as probabilidades batem com a realidade? --------------------
+# O Brier mistura discriminação e calibração; aqui a calibração é medida à parte,
+# com as predições fora-do-fold (cada paciente previsto 1 vez por repetição):
+#   intercepto: 0 = o modelo não superestima nem subestima o risco médio
+#   inclinação: 1 = ideal; < 1 = probabilidades extremas demais; > 1 = tímidas demais
+logit_seguro <- function(p) qlogis(pmin(pmax(p, 1e-4), 1 - 1e-4))
+calib_rep <- do.call(rbind, lapply(split(pm, list(pm$modelo, pm$repeticao), drop = TRUE), function(d) {
+  y01 <- as.integer(d$y == "pos"); lp <- logit_seguro(d$prob)
+  data.frame(modelo = d$modelo[1], repeticao = d$repeticao[1],
+             intercepto = unname(coef(glm(y01 ~ offset(lp), family = binomial))[1]),
+             inclinacao = unname(coef(glm(y01 ~ lp, family = binomial))[2]))
+}))
+calibracao <- do.call(rbind, lapply(names(MODELOS), function(mod) {
+  d <- calib_rep[calib_rep$modelo == mod, ]
+  data.frame(modelo = mod,
+             intercepto_media = mean(d$intercepto), intercepto_dp = sd(d$intercepto),
+             inclinacao_media = mean(d$inclinacao), inclinacao_dp = sd(d$inclinacao),
+             brier_media = princ$brier_media[match(mod, princ$modelo)])
+}))
+write.csv(calibracao, file.path(DIR_TABELAS, "03_calibracao.csv"), row.names = FALSE)
+cat("\n== Calibração (predições fora-do-fold; ideal: intercepto 0, inclinação 1) ==\n")
+print(data.frame(
+  modelo     = ROTULOS_MODELOS[calibracao$modelo],
+  Intercepto = sprintf("%+.3f ± %.3f", calibracao$intercepto_media, calibracao$intercepto_dp),
+  Inclinacao = sprintf("%.2f ± %.2f", calibracao$inclinacao_media, calibracao$inclinacao_dp),
+  Brier      = sprintf("%.3f", calibracao$brier_media)), row.names = FALSE)
+
+# Curva de calibração: pacientes agrupados em 10 faixas de risco previsto
+# (decis); em cada faixa, risco previsto médio × proporção real de diabéticos
+curva_cal <- do.call(rbind, lapply(split(pm, pm$modelo), function(d) {
+  cortes <- unique(quantile(d$prob, seq(0, 1, 0.1)))
+  faixa  <- cut(d$prob, cortes, include.lowest = TRUE)
+  n <- as.vector(table(faixa))
+  data.frame(modelo = d$modelo[1], prevista = as.vector(tapply(d$prob, faixa, mean)),
+             observada = as.vector(tapply(d$y == "pos", faixa, mean)), n = n)[n > 0, ]
+}))
+rot_cal <- setNames(sprintf("%s\ninclinação = %.2f", ROTULOS_MODELOS[calibracao$modelo],
+                            calibracao$inclinacao_media), calibracao$modelo)
+curva_cal$modelo_f <- factor(curva_cal$modelo, levels = names(ROTULOS_MODELOS),
+                             labels = rot_cal[names(ROTULOS_MODELOS)])
+g_cal <- ggplot(curva_cal, aes(x = prevista, y = observada, colour = modelo)) +
+  geom_abline(linetype = "dashed", colour = "#b5b4ad", linewidth = 0.4) +
+  geom_line(linewidth = 0.7) +
+  geom_point(aes(size = n)) +
+  facet_wrap(~ modelo_f, nrow = 1) +
+  scale_colour_manual(values = CORES_MODELOS, guide = "none") +
+  scale_size_area(max_size = 3.5, guide = "none") +
+  scale_x_continuous(limits = c(0, 1), breaks = c(0, 0.5, 1), labels = c("0%", "50%", "100%")) +
+  scale_y_continuous(limits = c(0, 1), breaks = c(0, 0.5, 1), labels = c("0%", "50%", "100%")) +
+  coord_equal() +
+  labs(title = "Calibração: o risco previsto bate com o observado?",
+       subtitle = "Predições fora-do-fold (MICE, 5 repetições) agrupadas em decis · diagonal = calibração perfeita",
+       x = "Risco previsto pelo modelo", y = "Proporção real com diabetes") +
+  tema_tcc(12) + theme(panel.spacing = unit(1.2, "lines"))
+ggsave(file.path(DIR_FIGURAS, "03_calibracao.png"), g_cal, width = 11, height = 3.9, dpi = 300)
 
 # ---- Figura: AUC por modelo (estratégia principal) --------------------------
 dp <- res_folds[res_folds$estrategia == ESTRATEGIA_PRINCIPAL, ]
