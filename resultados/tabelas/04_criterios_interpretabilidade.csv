@@ -1,5 +1,5 @@
 "modelo","auc_media","auc_dp","perda_vs_melhor","tamanho_modelo","unidade_tamanho","variaveis_usadas","calculo_a_mao","direcao_do_efeito","explicacao_individual"
 "logistica",0.836072934472934,0.0417515028427524,0.00165982905982909,9,"coeficientes",8,"Sim: soma de 9 termos na fórmula logística","Sim, com magnitude e IC 95% (odds ratio)","Sim: contribuição de cada variável"
-"arvore",0.73085584045584,0.0631261134993964,0.106876923076923,5,"nós (2 perguntas, 3 folhas)",2,"Sim: até 2 perguntas sim/não","Parcial: só nas variáveis usadas, por limiar","Sim: o caminho até a folha"
+"arvore",0.73085584045584,0.0631261134993965,0.106876923076923,5,"nós (2 perguntas, 3 folhas)",2,"Sim: até 2 perguntas sim/não","Parcial: só nas variáveis usadas, por limiar","Sim: o caminho até a folha"
 "rf",0.82865698005698,0.0477907578887262,0.00907578347578308,124748,"nós em 500 árvores",8,"Não","Não: a importância não tem sinal","Não sem ferramenta pós-hoc (ex.: SHAP)"
 "gbm",0.837732763532763,0.0448821540384346,0,1589,"nós em 227 árvores",7,"Não","Não: a importância não tem sinal","Não sem ferramenta pós-hoc (ex.: SHAP)"

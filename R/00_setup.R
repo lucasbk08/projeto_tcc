@@ -82,6 +82,12 @@ CORES_MODELOS <- c(
   gbm       = "#eda100"   # amarelo
 )
 
+# Vírgula decimal (ABNT) nas figuras: OutDec vale para os eixos do ggplot e
+# para o console; num() formata os rótulos escritos com sprintf.
+# Os CSVs continuam com ponto (write.csv usa dec = "." explicitamente).
+options(OutDec = ",")
+num <- function(x, d = 3) formatC(x, format = "f", digits = d, decimal.mark = ",")
+
 tema_tcc <- function(base = 13) {
   theme_minimal(base_size = base) +
     theme(

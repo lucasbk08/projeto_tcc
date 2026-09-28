@@ -101,7 +101,11 @@ níveis de risco, não possui ponto de corte intermediário e caiu para 0,165.
 Quanto à calibração, a regressão logística (intercepto −0,002; inclinação 0,93) e o random forest
 (−0,014; 1,00) produziram probabilidades próximas do risco observado. O gradient boosting apresentou
 inclinação de 1,37, indicando probabilidades comprimidas em torno da média, e a árvore de decisão,
-inclinação de 0,76.
+inclinação de 0,76. A causa provável da má calibração do gradient boosting é o critério de parada: o
+número de árvores foi escolhido pelo erro *out-of-bag*, método que, segundo a documentação do pacote
+`gbm`, tende a subestimar o número ideal de iterações. Com taxa de aprendizado de 0,01, o modelo final
+parou em 227 árvores, com as probabilidades ainda pouco afastadas da média. Isso não prejudica a
+ordenação dos pacientes (e, portanto, a AUC), apenas a calibração.
 
 ### Ensembles versus regressão logística (objetivo 2)
 
@@ -131,8 +135,12 @@ indicam menor estabilidade.
 Glicose e IMC foram as duas variáveis mais importantes nos quatro modelos. Na regressão logística,
 um aumento de um desvio-padrão na glicose (≈ 30 mg/dL) multiplicou a chance de diabetes por 3,28
 (IC 95%: 2,45–4,38); no IMC (≈ 6,9 kg/m²), por 1,84 (1,38–2,45). Gestações (OR = 1,50) e histórico
-familiar (OR = 1,34) também foram significativos. Com imputação múltipla, os intervalos ficaram em
-média 13% mais largos do que com uma imputação única. Insulina, dobra cutânea, pressão e idade não tiveram
+familiar (OR = 1,34) também foram significativos. Em relação à imputação única sem a variável
+resposta (usada na validação cruzada), a estimativa final envolve duas mudanças, cujos efeitos foram
+separados numa análise de sensibilidade. Apenas imputar múltiplas vezes, ainda sem a resposta, elevou
+o OR da glicose de 3,05 para 3,16 e alargou os intervalos em 5%, em média. Incluir também a resposta
+no modelo de imputação levou o OR a 3,28 e o alargamento a 14%, o que é coerente com a atenuação dos
+coeficientes em direção a 1 descrita por Moons et al. (2006) quando a resposta é omitida. Insulina, dobra cutânea, pressão e idade não tiveram
 efeito significativo depois de ajustadas pelas demais variáveis. A árvore podada ficou com apenas três
 folhas: pacientes com glicose ≥ 127,5 mg/dL e IMC ≥ 29,95 kg/m² têm 73% de chance de diabetes, contra
 19% entre os que têm glicose < 127,5 mg/dL.
@@ -157,9 +165,13 @@ Para verificar se a conclusão depende do tamanho e da especificidade do Pima, a
 repetida na base CDC Diabetes Health Indicators (UCI, id 891), derivada do levantamento telefônico
 BRFSS: 253.680 pessoas, 21 variáveis autodeclaradas e 13,9% com pré-diabetes ou diabetes. Por causa do
 tamanho, usou-se validação cruzada estratificada 5-fold repetida 2 vezes, e o random forest foi
-ajustado com o pacote `ranger` (WRIGHT; ZIEGLER, 2017). Os demais modelos, hiperparâmetros e critérios
-foram mantidos. Como as variáveis diferem das do Pima, trata-se de uma replicação do experimento, e
-não de validação externa dos modelos.
+ajustado com o pacote `ranger` (WRIGHT; ZIEGLER, 2017). Os demais modelos e hiperparâmetros, o teste
+estatístico e o limite de 0,05 para a perda de AUC foram mantidos. Como a base não tem valores
+ausentes, o objetivo 4 não se aplica. A análise no CDC se restringe ao desempenho (AUC-ROC, AUC-PR e
+escore de Brier) e à interpretabilidade descritiva (odds ratios, árvore e importância das variáveis).
+A calibração, o ponto de operação de triagem e os critérios de interpretabilidade foram avaliados apenas
+no Pima. Como as variáveis diferem das do Pima, trata-se de uma replicação do experimento, e não de
+validação externa dos modelos.
 
 As AUCs foram muito próximas das do Pima: gradient boosting 0,829, regressão logística 0,822, random
 forest 0,822 e árvore de decisão 0,730. Com 330 vezes mais dados, a vantagem do gradient boosting sobre

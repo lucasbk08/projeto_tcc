@@ -53,7 +53,7 @@ g_or <- ggplot(or_cdc, aes(x = odds_ratio, y = rotulo_f, colour = efeito)) +
   geom_errorbar(aes(xmin = ic95_inf, xmax = ic95_sup), width = 0.3, linewidth = 0.6,
                 orientation = "y") +
   geom_point(size = 2.6) +
-  geom_text(aes(x = ic95_sup, label = sprintf("%.2f", odds_ratio)), hjust = -0.3,
+  geom_text(aes(x = ic95_sup, label = num(odds_ratio, 2)), hjust = -0.3,
             size = 3.3, colour = "#0b0b0b") +
   scale_x_log10(expand = expansion(mult = c(0.05, 0.12))) +
   scale_colour_manual(values = c("aumenta o risco" = "#eb6834", "reduz o risco" = "#2a78d6",

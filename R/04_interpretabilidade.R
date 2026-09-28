@@ -33,6 +33,10 @@ completo <- ESTRATEGIAS[[ESTRATEGIA_PRINCIPAL]](pima, pima[0, ])$treino
 # imputação; sem ela, os OR ficariam puxados para 1 (Moons et al., 2006).
 # Unidade: +1 desvio-padrão observado, para os OR serem comparáveis entre si.
 vars <- names(ROTULOS_VARS)
+# Limites do IC no resultado de pool(): colunas "2.5 %" e "97.5 %" (ou "2,5 %"
+# com vírgula decimal), localizadas pela posição para não depender do separador
+ic_inf <- function(s) s[[grep("%$", names(s))[1]]]
+ic_sup <- function(s) s[[grep("%$", names(s))[2]]]
 pima_na <- zeros_para_na(pima)
 dp_obs <- sapply(pima_na[vars], sd, na.rm = TRUE)
 imp_or <- mice(pima_na, m = 20, maxit = 10, method = "pmm", printFlag = FALSE,
@@ -48,20 +52,45 @@ or <- data.frame(
   rotulo      = ROTULOS_VARS[vars],
   dp_original = dp_obs[vars],
   odds_ratio  = exp(combinado$estimate),
-  ic95_inf    = exp(combinado[["2.5 %"]]),
-  ic95_sup    = exp(combinado[["97.5 %"]]),
+  ic95_inf    = exp(ic_inf(combinado)),
+  ic95_sup    = exp(ic_sup(combinado)),
   p_valor     = combinado$p.value,
   row.names   = NULL
 )
 
-# Comparação com a imputação única (o método anterior): quanto o IC alarga
+# Sensibilidade: o que muda de (A) imputação única sem a resposta (a usada na
+# CV) para (C) imputação múltipla com a resposta? São DUAS mudanças, separadas
+# por um passo intermediário (B) = múltipla SEM a resposta:
+#   A -> B: efeito de imputar 20 vezes (o IC ganha a incerteza da imputação)
+#   B -> C: efeito de incluir a resposta (os OR "desencolhem", afastando-se de 1)
 unica <- completo; unica[vars] <- sweep(unica[vars], 2, dp_obs, "/")
-ic_unica <- suppressMessages(confint.default(glm(diabetes ~ ., data = unica,
-                                                 family = binomial)))[vars, ]
-largura_mi    <- combinado[["97.5 %"]] - combinado[["2.5 %"]]
-largura_unica <- ic_unica[, 2] - ic_unica[, 1]
-cat(sprintf("\nIC (escala log) com imputação múltipla é em média %.0f%% mais largo que com imputação única\n",
-            100 * (mean(largura_mi / largura_unica) - 1)))
+fit_a <- glm(diabetes ~ ., data = unica, family = binomial)
+imp_sem_resp <- mice(pima_na[vars], m = 20, maxit = 10, method = "pmm",
+                     printFlag = FALSE, seed = SEMENTE)
+comb_b <- summary(pool(as.mira(lapply(complete(imp_sem_resp, "all"), function(d) {
+  d[vars] <- sweep(d[vars], 2, dp_obs, "/"); d$diabetes <- pima$diabetes
+  glm(diabetes ~ ., data = d, family = binomial)
+}))), conf.int = TRUE)
+comb_b <- comb_b[match(vars, comb_b$term), ]
+ic_a <- suppressMessages(confint.default(fit_a))[vars, ]
+sens_imp <- data.frame(
+  cenario = c("A: única, sem resposta", "B: múltipla (m = 20), sem resposta",
+              "C: múltipla (m = 20), com resposta [usado]"),
+  or_glicose = exp(c(coef(fit_a)["glucose"], comb_b$estimate[vars == "glucose"],
+                     combinado$estimate[vars == "glucose"])),
+  or_imc     = exp(c(coef(fit_a)["mass"], comb_b$estimate[vars == "mass"],
+                     combinado$estimate[vars == "mass"])),
+  largura_ic_media = c(mean(ic_a[, 2] - ic_a[, 1]),
+                       mean(ic_sup(comb_b) - ic_inf(comb_b)),
+                       mean(ic_sup(combinado) - ic_inf(combinado))))
+sens_imp$largura_vs_A <- sens_imp$largura_ic_media / sens_imp$largura_ic_media[1]
+write.csv(sens_imp, file.path(DIR_TABELAS, "04_or_sensibilidade_imputacao.csv"), row.names = FALSE)
+cat("\n== Sensibilidade dos odds ratios à imputação (largura do IC em escala log) ==\n")
+print(data.frame(cenario = sens_imp$cenario,
+                 `OR glicose` = num(sens_imp$or_glicose, 2),
+                 `OR IMC` = num(sens_imp$or_imc, 2),
+                 `IC vs. A` = sprintf("%+.0f%%", 100 * (sens_imp$largura_vs_A - 1)),
+                 check.names = FALSE), row.names = FALSE)
 
 # Modelo final para uso preditivo (unidades originais, base imputada única)
 glm_final <- glm(diabetes ~ ., data = completo, family = binomial)
@@ -82,7 +111,7 @@ g_or <- ggplot(or, aes(x = odds_ratio, y = rotulo_f)) +
   geom_errorbar(aes(xmin = ic95_inf, xmax = ic95_sup), width = 0.25, orientation = "y",
                 colour = "#2a78d6", linewidth = 0.6) +
   geom_point(aes(shape = signif), size = 3, colour = "#2a78d6", fill = "white", stroke = 1.2) +
-  geom_text(aes(x = ic95_sup, label = sprintf("%.2f", odds_ratio)), hjust = -0.3,
+  geom_text(aes(x = ic95_sup, label = num(odds_ratio, 2)), hjust = -0.3,
             size = 3.8, colour = "#0b0b0b") +
   scale_x_log10(expand = expansion(mult = c(0.05, 0.12))) +
   scale_shape_manual(values = c("p < 0,05" = 16, "p ≥ 0,05" = 21)) +
@@ -215,7 +244,9 @@ criterios <- data.frame(
                       sprintf("nós em %d árvores", rf_final$ntree),
                       sprintf("nós em %d árvores", gbm_final$melhor_n)),
   variaveis_usadas = c(length(vars), length(vars_arvore),
-                       sum(imp_rf[vars] > 0), sum(imp_gbm[vars] > 0)),
+                       # RF: varUsed conta as divisões; a importância por permutação
+                       # pode sair negativa por acaso mesmo numa variável usada
+                       sum(varUsed(rf_final) > 0), sum(imp_gbm[vars] > 0)),
   calculo_a_mao = c("Sim: soma de 9 termos na fórmula logística",
                     sprintf("Sim: até %d perguntas sim/não",
                             max(floor(log2(as.integer(rownames(arvore_final$frame)))))),

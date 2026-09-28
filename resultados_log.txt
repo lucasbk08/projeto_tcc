@@ -9,11 +9,11 @@ Prevalência de diabetes: 34.9%
 
 == Zeros inválidos por variável ==
  variavel                  rotulo n_zeros pct_zeros
-  insulin                Insulina     374      48.7
-  triceps Dobra cutânea (tríceps)     227      29.6
- pressure      Pressão diastólica      35       4.6
-     mass                     IMC      11       1.4
-  glucose                 Glicose       5       0.7
+  insulin                Insulina     374      48,7
+  triceps Dobra cutânea (tríceps)     227      29,6
+ pressure      Pressão diastólica      35       4,6
+     mass                     IMC      11       1,4
+  glucose                 Glicose       5       0,7
 Pacientes com pelo menos um ausente: 376 | casos completos: 392 
 
 == Média (DP) por grupo ==
@@ -27,14 +27,46 @@ Pacientes com pelo menos um ausente: 376 | casos completos: 392
  Histórico familiar (DPF)     0.5 (0.3)     0.4 (0.3)     0.6 (0.4)        0
                     Idade   33.2 (11.8)   31.2 (11.7)   37.1 (11.0)        0
  p_valor_wilcox
-       3.75e-08
-       1.31e-40
-       1.63e-06
-       6.96e-10
-       7.48e-14
-       1.82e-17
-       1.20e-06
-       1.14e-17
+       3,75e-08
+       1,31e-40
+       1,63e-06
+       6,96e-10
+       7,48e-14
+       1,82e-17
+       1,20e-06
+       1,14e-17
+
+==== 2. Validação cruzada (4 estratégias x 4 modelos) ====
+
+>> Estratégia: Zeros mantidos (sem tratamento)
+   repetição 1/5 ok (0.1 min)
+   repetição 2/5 ok (0.2 min)
+   repetição 3/5 ok (0.3 min)
+   repetição 4/5 ok (0.5 min)
+   repetição 5/5 ok (0.6 min)
+
+>> Estratégia: Remoção de casos incompletos
+   repetição 1/5 ok (0.6 min)
+   repetição 2/5 ok (0.7 min)
+   repetição 3/5 ok (0.7 min)
+   repetição 4/5 ok (0.8 min)
+   repetição 5/5 ok (0.8 min)
+
+>> Estratégia: Imputação pela mediana
+   repetição 1/5 ok (0.9 min)
+   repetição 2/5 ok (1.1 min)
+   repetição 3/5 ok (1.2 min)
+   repetição 4/5 ok (1.3 min)
+   repetição 5/5 ok (1.4 min)
+
+>> Estratégia: Imputação múltipla (MICE)
+   repetição 1/5 ok (1.5 min)
+   repetição 2/5 ok (1.6 min)
+   repetição 3/5 ok (1.8 min)
+   repetição 4/5 ok (1.9 min)
+   repetição 5/5 ok (2.0 min)
+
+Validação cruzada concluída em 2.0 min.
 
 ==== 3. Comparação (objetivos 2, 3 e 4) ====
 
@@ -65,10 +97,10 @@ Melhor AUC média (mice): Gradient boosting
 
 == Efeito do tratamento de ausentes na AUC (média ± DP) ==
               modelo zeros_mantidos casos_completos mediana  mice
- Regressão logística          0.831           0.845   0.836 0.836
-   Árvore de decisão          0.714           0.765   0.731 0.731
-       Random forest          0.828           0.849   0.831 0.829
-   Gradient boosting          0.834           0.855   0.838 0.838
+ Regressão logística          0,831           0,845   0,836 0,836
+   Árvore de decisão          0,714           0,765   0,731 0,731
+       Random forest          0,828           0,849   0,831 0,829
+   Gradient boosting          0,834           0,855   0,838 0,838
 
 == Triagem: especificidade com sensibilidade >= 80% (mice) ==
               modelo Especificidade   Δ vs. logística
@@ -86,18 +118,22 @@ Melhor AUC média (mice): Gradient boosting
 
 ==== 4. Interpretabilidade ====
 
-IC (escala log) com imputação múltipla é em média 13% mais largo que com imputação única
+== Sensibilidade dos odds ratios à imputação (largura do IC em escala log) ==
+                                    cenario OR glicose OR IMC IC vs. A
+                     A: única, sem resposta       3,05   1,79      +0%
+         B: múltipla (m = 20), sem resposta       3,16   1,84      +5%
+ C: múltipla (m = 20), com resposta [usado]       3,28   1,84     +14%
 
 == Regressão logística: odds ratio por +1 DP (imputação múltipla, m = 20) ==
                  variavel +1 DP =   OR         IC95      p
-                  Glicose    30.5 3.28 [2.45; 4.38] <0.001
-                      IMC     6.9 1.84 [1.38; 2.45] <0.001
-                Gestações     3.4 1.50 [1.21; 1.87] <0.001
- Histórico familiar (DPF)     0.3 1.34 [1.10; 1.63] 0.0034
-                    Idade    11.8 1.18 [0.94; 1.48] 0.1583
-  Dobra cutânea (tríceps)    10.5 1.10 [0.81; 1.50] 0.5222
-       Pressão diastólica    12.4 0.89 [0.72; 1.09] 0.2577
-                 Insulina   118.8 0.88 [0.63; 1.24] 0.4563
+                  Glicose    30.5 3.28 [2.45; 4.38] <0,001
+                      IMC     6.9 1.84 [1.38; 2.45] <0,001
+                Gestações     3.4 1.50 [1.21; 1.87] <0,001
+ Histórico familiar (DPF)     0.3 1.34 [1.10; 1.63] 0,0034
+                    Idade    11.8 1.18 [0.94; 1.48] 0,1583
+  Dobra cutânea (tríceps)    10.5 1.10 [0.81; 1.50] 0,5222
+       Pressão diastólica    12.4 0.89 [0.72; 1.09] 0,2577
+                 Insulina   118.8 0.88 [0.63; 1.24] 0,4563
 
 Árvore final com 3 folhas; regras em resultados/tabelas/04_regras_arvore.txt
 

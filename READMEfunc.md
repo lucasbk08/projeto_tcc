@@ -354,6 +354,7 @@ Esses critérios são juntados à AUC de cada modelo na figura `04_equilibrio.pn
 | `03_triagem_sens80.csv` | um modelo | `especificidade_media/dp` com sensibilidade ≥ 80%, `delta_vs_logistica`, `p_valor` |
 | `03_calibracao.csv` | um modelo | `intercepto_media/dp` (ideal 0), `inclinacao_media/dp` (ideal 1), `brier_media` |
 | `04_odds_ratios.csv` | uma variável | `odds_ratio`, IC 95%, `p_valor`, `dp_original` (quanto vale "+1 DP") |
+| `04_or_sensibilidade_imputacao.csv` | um jeito de imputar | OR da glicose e do IMC e largura média do IC em 3 cenários (única sem resposta → múltipla sem resposta → múltipla com resposta), para separar o efeito de cada mudança |
 | `04_importancia_variaveis.csv` | modelo × variável | `bruto`, `relativa` (0 a 100), `ranking` |
 | `04_criterios_interpretabilidade.csv` | um modelo | `auc_media`, `perda_vs_melhor`, `tamanho_modelo`, `variaveis_usadas` e os três critérios práticos |
 | `04_regras_arvore.txt` | — | a árvore final e as regras "SE... ENTÃO..." |

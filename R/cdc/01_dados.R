@@ -76,8 +76,8 @@ g_prev <- ggplot(prev, aes(x = prev, y = rotulo)) +
   scale_colour_manual(values = c("Não" = "#2a78d6", "Sim" = "#eb6834")) +
   scale_x_continuous(labels = function(x) paste0(x, "%")) +
   labs(title = "Prevalência de pré-diabetes/diabetes por fator (CDC)",
-       subtitle = sprintf("Linha tracejada = prevalência geral (%.1f%%) · n = %s",
-                          100 * mean(com), fmt_n(nrow(cdc))),
+       subtitle = sprintf("Linha tracejada = prevalência geral (%s%%) · n = %s",
+                          num(100 * mean(com), 1), fmt_n(nrow(cdc))),
        x = "Pessoas com pré-diabetes ou diabetes", y = NULL,
        colour = "Tem o fator?") +
   tema_tcc()

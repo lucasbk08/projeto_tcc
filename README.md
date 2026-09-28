@@ -122,6 +122,11 @@ Esse é um ponto da curva ROC de cada fold, e não um limiar pronto para uso cl�
 | Gradient boosting | −0,001 | **1,37** | probabilidades "tímidas" demais (comprimidas perto da média) |
 | Árvore de decisão | +0,002 | 0,76 | extrema demais, com só 3 níveis de risco |
 
+A causa provável da "timidez" do GBM é o número de árvores. Ele é escolhido pelo erro OOB (`gbm.perf(method = "OOB")`),
+e a documentação do `gbm` avisa que esse método tende a subestimar o número ideal. Com taxa de aprendizado de 0,01,
+o modelo final parou em 227 árvores, ainda "cru", e as probabilidades ficaram comprimidas perto da média. A AUC
+não é afetada, porque a ordenação dos pacientes se mantém. O efeito aparece só na calibração.
+
 ![Calibração](resultados/figuras/03_calibracao.png)
 
 ### Objetivo 4: tratamento dos valores ausentes (AUC média)
@@ -143,8 +148,19 @@ diferença pareada foi significativa. A árvore de decisão é o modelo mais sen
 
 Glicose e IMC são as duas variáveis mais importantes **nos quatro modelos**. Na regressão logística,
 +1 DP de glicose (≈ 30 mg/dL) triplica a chance de diabetes (OR = 3,28; IC 95% 2,45–4,38).
-Os ICs dos odds ratios vêm de **imputação múltipla** (20 bases, regras de Rubin). Com uma imputação só, eles
-ficariam em média 13% mais estreitos do que deveriam.
+Os odds ratios vêm de **imputação múltipla** (20 bases, regras de Rubin), com a resposta incluída no
+preenchimento. Em relação à imputação única sem a resposta (a da validação cruzada), são duas mudanças,
+e `04_or_sensibilidade_imputacao.csv` separa o efeito de cada uma:
+
+| Cenário | OR glicose | Largura do IC |
+|---|---|---|
+| Imputação única, sem a resposta | 3,05 | referência |
+| Múltipla, sem a resposta | 3,16 | +5% |
+| **Múltipla, com a resposta (usado)** | **3,28** | **+14%** |
+
+Imputar várias vezes faz o IC carregar a incerteza sobre os valores preenchidos. Incluir a resposta
+evita que os ORs sejam puxados para 1 (Moons et al., 2006). No OR da glicose, cada mudança responde por
+cerca de metade do aumento.
 A árvore final resume o problema em 3 regras: glicose ≥ 127,5 **e** IMC ≥ 29,95 → risco de 73%.
 
 | Odds ratios | Árvore final |
@@ -207,6 +223,10 @@ conclusão do Pima se mantém numa base 330× maior. Detalhes do desenho em [REA
 - Limiar de 0,5 privilegia especificidade; em triagem, um limiar menor aumentaria a sensibilidade.
 - Na validação cruzada, o MICE usa uma única imputação por fold (m = 1), por custo computacional. Os odds ratios
   finais usam imputação múltipla (m = 20).
+- O número de árvores do GBM é escolhido pelo erro OOB, que tende a escolher árvores de menos. No Pima, isso deixa
+  o GBM mal calibrado (inclinação 1,37), mas não afeta a AUC.
+- Calibração, triagem e critérios de interpretabilidade foram calculados só no Pima. No CDC, a comparação
+  se limita ao desempenho (AUC-ROC, AUC-PR, Brier) e à interpretabilidade descritiva (odds ratios, árvore, importância).
 - Os critérios de interpretabilidade são escolhas do grupo (tamanho do modelo, cálculo à mão, direção do
   efeito, explicação individual); não há métrica única consagrada na literatura.
 - CDC: variáveis autodeclaradas e alvo que junta pré-diabetes e diabetes; levantamento transversal, sem leitura causal.

@@ -56,7 +56,7 @@ cat("\n== Média (DP) por grupo ==\n"); print(descr, row.names = FALSE)
 zeros$rotulo <- factor(zeros$rotulo, levels = rev(zeros$rotulo))
 g_zeros <- ggplot(zeros, aes(x = pct_zeros, y = rotulo)) +
   geom_col(fill = "#2a78d6", width = 0.6) +
-  geom_text(aes(label = sprintf("%d (%.1f%%)", n_zeros, pct_zeros)),
+  geom_text(aes(label = sprintf("%d (%s%%)", n_zeros, num(pct_zeros, 1))),
             hjust = -0.1, colour = "#0b0b0b", size = 4) +
   scale_x_continuous(limits = c(0, 62), breaks = seq(0, 50, 10), expand = c(0, 0),
                      labels = function(x) paste0(x, "%")) +

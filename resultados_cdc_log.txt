@@ -10,157 +10,27 @@ Valores ausentes: 0 | linhas repetidas (mesmo perfil de respostas): 24206
 
 == Por grupo (ordenado pela diferença padronizada) ==
                              rotulo       tipo sem_diabetes com_diabetes    smd
- Saúde geral (1 excelente … 5 ruim) média (DP)    2.4 (1.0)    3.3 (1.0)  0.891
-                       Pressão alta      % sim        37.7%        75.3%  0.820
-                                IMC média (DP)   27.8 (6.3)   31.9 (7.4)  0.604
-                    Colesterol alto      % sim        38.4%        67.0%  0.597
- Faixa etária (13 faixas de 5 anos) média (DP)    7.8 (3.1)    9.4 (2.3)  0.571
-             Dificuldade para andar      % sim        13.5%        37.1%  0.563
-                        Renda (1–8) média (DP)    6.2 (2.0)    5.2 (2.2) -0.463
-   Dias de saúde física ruim (30 d) média (DP)    3.6 (8.1)   8.0 (11.3)  0.439
-          Doença cardíaca / infarto      % sim         7.3%        22.3%  0.431
-                 Escolaridade (1–6) média (DP)    5.1 (1.0)    4.7 (1.1) -0.350
-         Atividade física (30 dias)      % sim        77.7%        63.1% -0.325
-                         AVC prévio      % sim         3.2%         9.2%  0.251
-         Checou colesterol (5 anos)      % sim        95.8%        99.3%  0.231
-           Consumo pesado de álcool      % sim         6.1%         2.4% -0.189
-   Dias de saúde mental ruim (30 d) média (DP)    3.0 (7.1)    4.5 (8.9)  0.184
-   Fumante (≥ 100 cigarros na vida)      % sim        43.1%        51.8%  0.175
-              Come verdura todo dia      % sim        82.0%        75.6% -0.157
-                Come fruta todo dia      % sim        64.2%        58.5% -0.117
-                     Sexo masculino      % sim        43.4%        47.9%  0.091
-   Deixou de ir ao médico por custo      % sim         8.1%        10.6%  0.087
-             Tem cobertura de saúde      % sim        95.0%        96.0%  0.049
+ Saúde geral (1 excelente … 5 ruim) média (DP)    2.4 (1.0)    3.3 (1.0)  0,891
+                       Pressão alta      % sim        37.7%        75.3%  0,820
+                                IMC média (DP)   27.8 (6.3)   31.9 (7.4)  0,604
+                    Colesterol alto      % sim        38.4%        67.0%  0,597
+ Faixa etária (13 faixas de 5 anos) média (DP)    7.8 (3.1)    9.4 (2.3)  0,571
+             Dificuldade para andar      % sim        13.5%        37.1%  0,563
+                        Renda (1–8) média (DP)    6.2 (2.0)    5.2 (2.2) -0,463
+   Dias de saúde física ruim (30 d) média (DP)    3.6 (8.1)   8.0 (11.3)  0,439
+          Doença cardíaca / infarto      % sim         7.3%        22.3%  0,431
+                 Escolaridade (1–6) média (DP)    5.1 (1.0)    4.7 (1.1) -0,350
+         Atividade física (30 dias)      % sim        77.7%        63.1% -0,325
+                         AVC prévio      % sim         3.2%         9.2%  0,251
+         Checou colesterol (5 anos)      % sim        95.8%        99.3%  0,231
+           Consumo pesado de álcool      % sim         6.1%         2.4% -0,189
+   Dias de saúde mental ruim (30 d) média (DP)    3.0 (7.1)    4.5 (8.9)  0,184
+   Fumante (≥ 100 cigarros na vida)      % sim        43.1%        51.8%  0,175
+              Come verdura todo dia      % sim        82.0%        75.6% -0,157
+                Come fruta todo dia      % sim        64.2%        58.5% -0,117
+                     Sexo masculino      % sim        43.4%        47.9%  0,091
+   Deixou de ir ao médico por custo      % sim         8.1%        10.6%  0,087
+             Tem cobertura de saúde      % sim        95.0%        96.0%  0,049
 
-==== CDC 3. Comparação (objetivos 2 e 3 + Pima vs. CDC) ====
-
-== Desempenho no CDC (média ± DP em 10 folds) ==
-              modelo           AUC        AUC-PR         Brier
-   Gradient boosting 0.829 ± 0.001 0.430 ± 0.003 0.097 ± 0.000
- Regressão logística 0.822 ± 0.001 0.405 ± 0.002 0.099 ± 0.000
-       Random forest 0.822 ± 0.001 0.421 ± 0.003 0.098 ± 0.000
-   Árvore de decisão 0.730 ± 0.008 0.310 ± 0.011 0.106 ± 0.001
-
-Métricas de classe: limiar 0,5 vs. limiar = prevalência do treino (~0,14)
-              modelo Sensib (0,5) Especif (0,5) Sensib (prev) Especif (prev)
-   Gradient boosting        0.193         0.975         0.765          0.736
- Regressão logística        0.156         0.978         0.768          0.723
-       Random forest        0.145         0.983         0.803          0.685
-   Árvore de decisão        0.115         0.986         0.681          0.706
-
-== ΔAUC = modelo − regressão logística (teste t corrigido de Nadeau & Bengio) ==
-            modelo delta_AUC               IC95      p vence em % dos folds
- Árvore de decisão   -0.0922 [-0.1030; -0.0813] 0.0000                   0%
-     Random forest   -0.0002 [-0.0019; +0.0015] 0.8032                  40%
- Gradient boosting   +0.0073 [+0.0061; +0.0086] 0.0000                 100%
- supera LR em > 0,05?
-                  não
-                  não
-                  não
-
-== Objetivo 3: perda de AUC ao trocar Gradient boosting pelo interpretável (limite: 0,05) ==
-       interpretavel  perda             IC95    relevante
- Regressão logística 0.0073 [0.0061; 0.0086] não (≤ 0,05)
-   Árvore de decisão 0.0995 [0.0886; 0.1103] SIM (> 0,05)
-
-== Pima vs. CDC: AUC média (e diferença para a logística) ==
-              modelo Pima (n = 768) CDC (n = 253.680)
-   Gradient boosting          0.838             0.829
- Regressão logística          0.836             0.822
-       Random forest          0.829             0.822
-   Árvore de decisão          0.731             0.730
-
-==== CDC 4. Interpretabilidade ====
-
-== Regressão logística (CDC): odds ratios ==
-                           variavel           unidade   OR         IC95      p
-         Checou colesterol (5 anos)       sim vs. não 3.47 [3.03; 3.97] <0.001
-                       Pressão alta       sim vs. não 2.13 [2.07; 2.20] <0.001
-                    Colesterol alto       sim vs. não 1.78 [1.74; 1.83] <0.001
- Saúde geral (1 excelente … 5 ruim)          +1 nível 1.71 [1.68; 1.74] <0.001
-                                IMC          +5 kg/m² 1.36 [1.34; 1.37] <0.001
-                     Sexo masculino       sim vs. não 1.29 [1.26; 1.33] <0.001
-          Doença cardíaca / infarto       sim vs. não 1.25 [1.20; 1.29] <0.001
-                         AVC prévio       sim vs. não 1.14 [1.09; 1.20] <0.001
- Faixa etária (13 faixas de 5 anos) +1 faixa (5 anos) 1.13 [1.13; 1.14] <0.001
-             Dificuldade para andar       sim vs. não 1.13 [1.09; 1.17] <0.001
-             Tem cobertura de saúde       sim vs. não 1.09 [1.02; 1.16]  0.014
-   Deixou de ir ao médico por custo       sim vs. não 1.02 [0.97; 1.07]  0.436
-   Fumante (≥ 100 cigarros na vida)       sim vs. não 0.99 [0.96; 1.02]  0.431
-                 Escolaridade (1–6)          +1 nível 0.97 [0.96; 0.98] <0.001
-              Come verdura todo dia       sim vs. não 0.97 [0.94; 1.00]  0.037
-   Dias de saúde mental ruim (30 d)          +10 dias 0.96 [0.95; 0.98] <0.001
-                Come fruta todo dia       sim vs. não 0.95 [0.93; 0.98] <0.001
-                        Renda (1–8)          +1 faixa 0.95 [0.94; 0.96] <0.001
-         Atividade física (30 dias)       sim vs. não 0.95 [0.92; 0.98] <0.001
-   Dias de saúde física ruim (30 d)          +10 dias 0.93 [0.91; 0.94] <0.001
-           Consumo pesado de álcool       sim vs. não 0.46 [0.43; 0.50] <0.001
-
-Árvore final com 6 folhas; regras em resultados/cdc/tabelas/04_regras_arvore.txt 
-Gradient boosting final: 1500 árvores (de 1500) escolhidas pelo erro OOB
-
-== Ranking de importância das variáveis no CDC (1 = mais importante) ==
-                           variavel logistica arvore rf gbm
-                                IMC         1    7.0  2   3
- Saúde geral (1 excelente … 5 ruim)         2    2.0  1   1
-                       Pressão alta         3    1.0  4   2
- Faixa etária (13 faixas de 5 anos)         4    5.0  3   4
-                    Colesterol alto         5    3.0  5   5
-           Consumo pesado de álcool         6   16.5 13   9
-                     Sexo masculino         7   16.5 12  10
-         Checou colesterol (5 anos)         8   16.5 19  11
-                        Renda (1–8)         9   10.0  7   8
-          Doença cardíaca / infarto        10    8.0  9   7
-   Dias de saúde física ruim (30 d)        11    6.0  6  15
-             Dificuldade para andar        12    4.0  8   6
-                         AVC prévio        13   16.5 20  12
-                 Escolaridade (1–6)        14   11.0 11  13
-   Dias de saúde mental ruim (30 d)        15    9.0 10  14
-                Come fruta todo dia        16   16.5 17  17
-         Atividade física (30 dias)        17   16.5 18  18
-             Tem cobertura de saúde        18   16.5 16  21
-              Come verdura todo dia        19   16.5 21  19
-   Fumante (≥ 100 cigarros na vida)        20   16.5 15  16
-   Deixou de ir ao médico por custo        21   16.5 14  20
-
-==== Informações da sessão ====
-R version 4.6.1 (2026-06-24 ucrt)
-Platform: x86_64-w64-mingw32/x64
-Running under: Windows 11 x64 (build 26200)
-
-Matrix products: default
-  LAPACK version 3.12.1
-
-locale:
-[1] LC_COLLATE=Portuguese_Brazil.utf8  LC_CTYPE=Portuguese_Brazil.utf8   
-[3] LC_MONETARY=Portuguese_Brazil.utf8 LC_NUMERIC=C                      
-[5] LC_TIME=Portuguese_Brazil.utf8    
-
-time zone: America/Sao_Paulo
-tzcode source: internal
-
-attached base packages:
-[1] grid      stats     graphics  grDevices utils     datasets  methods  
-[8] base     
-
-other attached packages:
- [1] ranger_0.18.0        partykit_1.3-0       mvtnorm_1.4-2       
- [4] libcoin_1.0-13       ggplot2_4.0.3        mice_3.19.0         
- [7] pROC_1.19.1          gbm_2.3.1            randomForest_4.7-1.2
-[10] rpart_4.1.27        
-
-loaded via a namespace (and not attached):
- [1] sandwich_3.1-3     generics_0.1.4     tidyr_1.3.2        shape_1.4.6.1     
- [5] lattice_0.22-9     inum_1.0-5         lme4_2.0-6         magrittr_2.0.5    
- [9] mitml_0.4-5        RColorBrewer_1.1-3 iterators_1.0.14   foreach_1.5.2     
-[13] jomo_2.7-6         glmnet_5.1         Matrix_1.7-5       nnet_7.3-20       
-[17] backports_1.5.1    Formula_1.2-6      survival_3.8-6     purrr_1.2.2       
-[21] scales_1.4.0       codetools_0.2-20   reformulas_0.4.4   Rdpack_2.6.6      
-[25] cli_3.6.6          rlang_1.3.0        rbibutils_2.4.1    splines_4.6.1     
-[29] withr_3.0.3        pan_2.0            tools_4.6.1        nloptr_2.2.1      
-[33] minqa_1.2.8        dplyr_1.2.1        boot_1.3-32        broom_1.0.13      
-[37] strucchange_1.6-0  vctrs_0.7.3        R6_2.6.1           zoo_1.9-0         
-[41] lifecycle_1.0.5    MASS_7.3-65        pkgconfig_2.0.3    pillar_1.11.1     
-[45] gtable_0.3.6       glue_1.8.1         Rcpp_1.1.2         tibble_3.3.1      
-[49] tidyselect_1.2.1   farver_2.1.2       nlme_3.1-169       labeling_0.4.3    
-[53] compiler_4.6.1     S7_0.2.2          
+==== CDC 2. Validação cruzada (5-fold x 2, 4 modelos) ====
+   repetição 1, fold 1/5 ok (4.1 min)

@@ -226,8 +226,8 @@ curva_cal <- do.call(rbind, lapply(split(pm, pm$modelo), function(d) {
   data.frame(modelo = d$modelo[1], prevista = as.vector(tapply(d$prob, faixa, mean)),
              observada = as.vector(tapply(d$y == "pos", faixa, mean)), n = n)[n > 0, ]
 }))
-rot_cal <- setNames(sprintf("%s\ninclinação = %.2f", ROTULOS_MODELOS[calibracao$modelo],
-                            calibracao$inclinacao_media), calibracao$modelo)
+rot_cal <- setNames(sprintf("%s\ninclinação = %s", ROTULOS_MODELOS[calibracao$modelo],
+                            num(calibracao$inclinacao_media, 2)), calibracao$modelo)
 curva_cal$modelo_f <- factor(curva_cal$modelo, levels = names(ROTULOS_MODELOS),
                              labels = rot_cal[names(ROTULOS_MODELOS)])
 g_cal <- ggplot(curva_cal, aes(x = prevista, y = observada, colour = modelo)) +
@@ -256,7 +256,7 @@ g_auc <- ggplot(dp, aes(x = auc, y = modelo_f, colour = modelo)) +
   geom_boxplot(fill = NA, outlier.shape = NA, width = 0.5, linewidth = 0.5,
                colour = "#52514e") +
   geom_point(data = medias, shape = 21, size = 3.5, fill = "white", stroke = 1.4) +
-  geom_text(data = medias, aes(label = sprintf("%.3f", auc)), colour = "#0b0b0b",
+  geom_text(data = medias, aes(label = num(auc)), colour = "#0b0b0b",
             nudge_y = 0.38, size = 3.8, fontface = "bold") +
   scale_colour_manual(values = CORES_MODELOS, guide = "none") +
   labs(title = "AUC-ROC na validação cruzada 10-fold × 5 repetições",
@@ -272,7 +272,7 @@ rocs <- do.call(rbind, lapply(names(MODELOS), function(mod) {
   d <- pr[pr$modelo == mod, ]
   ro <- pROC::roc(d$y == "pos", d$prob, quiet = TRUE, levels = c(FALSE, TRUE), direction = "<")
   data.frame(modelo = mod, fpr = 1 - ro$specificities, tpr = ro$sensitivities,
-             rotulo = sprintf("%s (AUC = %.3f)", ROTULOS_MODELOS[[mod]], as.numeric(ro$auc)))
+             rotulo = sprintf("%s (AUC = %s)", ROTULOS_MODELOS[[mod]], num(as.numeric(ro$auc))))
 }))
 rocs <- rocs[order(rocs$modelo, rocs$fpr, rocs$tpr), ]
 rot <- unique(rocs[, c("modelo", "rotulo")])

@@ -128,7 +128,7 @@ if (file.exists(arq_pima)) {
     geom_errorbar(aes(xmin = auc - auc_dp, xmax = auc + auc_dp), width = 0.25,
                   linewidth = 0.6, orientation = "y") +
     geom_point(size = 3.2) +
-    geom_text(aes(label = sprintf("%.3f", auc)), nudge_y = 0.32, size = 3.6,
+    geom_text(aes(label = num(auc)), nudge_y = 0.32, size = 3.6,
               colour = "#0b0b0b") +
     facet_wrap(~ base, nrow = 1) +
     scale_colour_manual(values = CORES_MODELOS, guide = "none") +
@@ -152,21 +152,21 @@ medias <- aggregate(valor ~ metrica + modelo + modelo_f, longo, mean)
 g_auc <- ggplot(longo, aes(x = valor, y = modelo_f, colour = modelo)) +
   geom_point(alpha = 0.45, size = 2.2, position = position_jitter(height = 0.12, width = 0, seed = 1)) +
   geom_point(data = medias, shape = 21, size = 3.8, fill = "white", stroke = 1.4) +
-  geom_text(data = medias, aes(label = sprintf("%.3f", valor)), colour = "#0b0b0b",
+  geom_text(data = medias, aes(label = num(valor)), colour = "#0b0b0b",
             nudge_y = 0.36, size = 3.6, fontface = "bold") +
   facet_wrap(~ metrica, scales = "free_x") +
   scale_colour_manual(values = CORES_MODELOS, guide = "none") +
   labs(title = sprintf("Desempenho no CDC: validação cruzada %d-fold × %d",
                        CDC_K_FOLDS, CDC_N_REPETICOES),
-       subtitle = sprintf("ponto = 1 fold · círculo = média · AUC-PR de um chute = prevalência (%.2f)",
-                          mean(res_cdc$limiar_prev)),
+       subtitle = sprintf("ponto = 1 fold · círculo = média · AUC-PR de um chute = prevalência (%s)",
+                          num(mean(res_cdc$limiar_prev), 2)),
        x = NULL, y = NULL) +
   tema_tcc() + theme(panel.spacing = unit(1.5, "lines"))
 ggsave(file.path(DIR_CDC_FIGURAS, "03_auc_por_modelo.png"), g_auc, width = 10, height = 4.5, dpi = 300)
 
 # ---- Figura: curvas ROC ----------------------------------------------------------
 rot <- unique(roc_cdc[, c("modelo", "auc")])
-rot$rotulo <- sprintf("%s (AUC = %.3f)", ROTULOS_MODELOS[rot$modelo], rot$auc)
+rot$rotulo <- sprintf("%s (AUC = %s)", ROTULOS_MODELOS[rot$modelo], num(rot$auc))
 roc_cdc$modelo <- factor(roc_cdc$modelo, levels = names(ROTULOS_MODELOS))
 g_roc <- ggplot(roc_cdc, aes(x = fpr, y = tpr, colour = modelo)) +
   geom_abline(linetype = "dashed", colour = "#b5b4ad", linewidth = 0.4) +
