@@ -1,0 +1,36 @@
+==== CDC 1. Dados e análise exploratória ====
+
+== Dataset ==
+Pessoas: 253680 | Variáveis preditoras: 21 
+
+   neg    pos 
+218334  35346 
+Prevalência de pré-diabetes ou diabetes: 13.9%
+Valores ausentes: 0 | linhas repetidas (mesmo perfil de respostas): 24206 
+
+== Por grupo (ordenado pela diferença padronizada) ==
+                             rotulo       tipo sem_diabetes com_diabetes    smd
+ Saúde geral (1 excelente … 5 ruim) média (DP)    2.4 (1.0)    3.3 (1.0)  0.891
+                       Pressão alta      % sim        37.7%        75.3%  0.820
+                                IMC média (DP)   27.8 (6.3)   31.9 (7.4)  0.604
+                    Colesterol alto      % sim        38.4%        67.0%  0.597
+ Faixa etária (13 faixas de 5 anos) média (DP)    7.8 (3.1)    9.4 (2.3)  0.571
+             Dificuldade para andar      % sim        13.5%        37.1%  0.563
+                        Renda (1–8) média (DP)    6.2 (2.0)    5.2 (2.2) -0.463
+   Dias de saúde física ruim (30 d) média (DP)    3.6 (8.1)   8.0 (11.3)  0.439
+          Doença cardíaca / infarto      % sim         7.3%        22.3%  0.431
+                 Escolaridade (1–6) média (DP)    5.1 (1.0)    4.7 (1.1) -0.350
+         Atividade física (30 dias)      % sim        77.7%        63.1% -0.325
+                         AVC prévio      % sim         3.2%         9.2%  0.251
+         Checou colesterol (5 anos)      % sim        95.8%        99.3%  0.231
+           Consumo pesado de álcool      % sim         6.1%         2.4% -0.189
+   Dias de saúde mental ruim (30 d) média (DP)    3.0 (7.1)    4.5 (8.9)  0.184
+   Fumante (≥ 100 cigarros na vida)      % sim        43.1%        51.8%  0.175
+              Come verdura todo dia      % sim        82.0%        75.6% -0.157
+                Come fruta todo dia      % sim        64.2%        58.5% -0.117
+                     Sexo masculino      % sim        43.4%        47.9%  0.091
+   Deixou de ir ao médico por custo      % sim         8.1%        10.6%  0.087
+             Tem cobertura de saúde      % sim        95.0%        96.0%  0.049
+
+==== CDC 2. Validação cruzada (5-fold x 2, 4 modelos) ====
+Growing trees.. Progress: 69%. Estimated remaining time: 14 seconds.

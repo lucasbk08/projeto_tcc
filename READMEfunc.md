@@ -16,6 +16,7 @@ Para os **resultados** e as conclusões do TCC, veja o [README.md](README.md). E
 7. [Onde mexer para mudar alguma coisa](#7-onde-mexer-para-mudar-alguma-coisa)
 8. [Glossário](#8-glossário)
 9. [Perguntas frequentes](#9-perguntas-frequentes)
+10. [Segunda análise: base CDC](#10-segunda-análise-base-cdc)
 
 ---
 
@@ -55,7 +56,8 @@ Tudo o que aparece no console também é salvo em `resultados_log.txt`.
 ```
 projeto_tcc/
 │
-├── run_all.R                  ← o "botão de play": roda tudo em ordem
+├── run_all.R                  ← o "botão de play": roda tudo em ordem (Pima)
+├── run_cdc.R                  ← roda a segunda análise (CDC) — ver seção 10
 ├── projeto_tcc.Rproj          ← abre o projeto no RStudio
 ├── resultados_log.txt         ← cópia de tudo o que foi impresso no console
 ├── README.md                  ← resultados e conclusões do TCC
@@ -68,15 +70,19 @@ projeto_tcc/
 │   ├── 01_dados.R             ← carrega os dados e faz a análise exploratória
 │   ├── 02_validacao_cruzada.R ← treina e testa os modelos (a parte pesada)
 │   ├── 03_comparacao.R        ← compara os modelos e responde aos objetivos
-│   └── 04_interpretabilidade.R← mostra o que cada modelo "aprendeu"
+│   ├── 04_interpretabilidade.R← mostra o que cada modelo "aprendeu"
+│   └── cdc/                   ← scripts da segunda análise (mesma lógica, base CDC)
 │
 ├── data/
-│   └── pima_bruto.csv         ← cópia dos dados originais (só para consulta)
+│   ├── pima_bruto.csv         ← o dataset Pima (é daqui que o código lê)
+│   └── cdc_diabetes_health_indicators.csv ← o dataset CDC
 │
 ├── resultados/
 │   ├── tabelas/               ← todas as tabelas em CSV (e as regras da árvore em TXT)
 │   ├── figuras/               ← todas as figuras em PNG, 300 dpi
-│   └── modelos/               ← modelos finais em .rds (NÃO vai para o GitHub)
+│   ├── modelos/               ← modelos finais em .rds (NÃO vai para o GitHub)
+│   ├── cdc/                   ← tabelas e figuras da segunda análise
+│   └── cdc_amostra/           ← testes rápidos do CDC (NÃO vai para o GitHub)
 │
 └── docs/
     └── rascunho_metodologia_resultados.md ← texto-base para o Projeto Completo
@@ -155,7 +161,6 @@ Em palavras:
 
 | Pacote | Para quê |
 |---|---|
-| `mlbench` | Contém o dataset Pima. |
 | `rpart` | Árvore de decisão. |
 | `randomForest` | Random forest. |
 | `gbm` | Gradient boosting. |
@@ -239,7 +244,7 @@ Diz se a diferença de AUC entre dois modelos é **real ou só sorte**. Devolve 
 **O que faz:** carrega o dataset e descreve os pacientes.
 
 **Passo a passo:**
-1. Carrega o **Pima Indians Diabetes** do pacote `mlbench` e salva uma cópia em `data/pima_bruto.csv`.
+1. Lê o **Pima Indians Diabetes** de `data/pima_bruto.csv` e confere se tem 768 linhas e 9 colunas, sem valores vazios.
 2. Conta os pacientes: 768 no total, 268 com diabetes (34,9%).
 3. Conta os **zeros impossíveis** por variável. Insulina lidera, com 374 (48,7%).
 4. Calcula média e desvio-padrão de cada variável, separando quem tem e quem não tem diabetes, e aplica um teste de Wilcoxon para ver se os grupos diferem.
@@ -400,8 +405,8 @@ No final, todas as importâncias são colocadas na mesma escala (**100 = a vari�
 
 ## 9. Perguntas frequentes
 
-**Os dados vêm do `data/pima_bruto.csv`?**
-Não. O script `01_dados.R` carrega os dados direto do pacote `mlbench` e só **salva** uma cópia no CSV, para consulta. Editar o CSV não muda nada no experimento.
+**De onde vêm os dados do Pima?**
+Do arquivo `data/pima_bruto.csv`, que está no próprio repositório. Antes o código carregava o dataset do pacote `mlbench`, mas o Pima foi removido dele na versão 2.1-10, junto com a retirada do repositório UCI. O CSV é uma cópia exportada do `mlbench` 2.1-3.1. **Não edite esse arquivo**: qualquer mudança nele altera os resultados.
 
 **Por que os resultados não mudam quando eu rodo de novo?**
 Por causa da semente fixa (`SEMENTE = 2026`). Isso é proposital: qualquer pessoa que rodar o código chega aos mesmos números.
@@ -420,3 +425,68 @@ Tudo o que foi impresso no console na última execução completa, incluindo as 
 
 **Posso rodar só um script?**
 Pode, mas antes é preciso rodar `00_setup.R` e `funcoes.R`, porque eles definem tudo o que os outros usam. Os scripts 02 e 04 também precisam do objeto `pima`, criado no `01_dados.R`. Na dúvida, use `run_all.R`.
+
+---
+
+## 10. Segunda análise: base CDC
+
+### Para que serve
+
+O Pima é pequeno (768 pacientes) e muito específico (mulheres Pima com 21 anos ou mais). A segunda análise **repete a mesma comparação dos 4 modelos** numa base 330 vezes maior e diferente. A pergunta é: **a conclusão do Pima ("a logística empata com os ensembles") continua valendo?**
+
+| | Pima | CDC Diabetes Health Indicators |
+|---|---|---|
+| Pessoas | 768 | 253.680 |
+| Com diabetes | 34,9% | 13,9% (**pré-diabetes ou diabetes**) |
+| Variáveis | 8 clínicas e de laboratório (glicose, insulina…) | 21 **autodeclaradas** em questionário telefônico (pressão alta sim/não, IMC, renda…) |
+| Dados faltantes | muitos (zeros impossíveis) | nenhum |
+| Fonte | cópia do `mlbench` (removido do UCI) | UCI, id 891 (pesquisa BRFSS do CDC, EUA) |
+
+> **Não é validação externa.** As variáveis são outras, então não dá para aplicar o modelo treinado no Pima na base CDC. O que se faz é **replicar o experimento** em outro contexto.
+
+### Como rodar
+
+| Comando | O que faz | Tempo |
+|---|---|---|
+| `Rscript run_cdc.R` | Análise completa na base inteira | ~45–60 min |
+| `Rscript run_cdc.R --sem-cv` | Reaproveita a validação cruzada já salva | alguns min |
+| `Rscript run_cdc.R --amostra=20000` | Teste rápido numa amostra estratificada. As saídas vão para `resultados/cdc_amostra/`, fora do Git. | ~3 min |
+
+Rode o `run_all.R` (Pima) **antes**. Assim, o script de comparação encontra os resultados do Pima e gera a figura "Pima vs. CDC".
+
+### Onde fica cada coisa
+
+A análise é **separada** da do Pima. Ela reaproveita só a configuração geral (`R/00_setup.R`) e a caixa de ferramentas (`R/funcoes.R`: modelos, métricas e teste t).
+
+```
+run_cdc.R                          ← botão de play do CDC (log em resultados_cdc_log.txt)
+R/cdc/
+├── 00_setup_cdc.R                 ← parâmetros, rótulos, random forest via ranger, AUC-PR
+├── 01_dados.R                     ← baixa (1ª vez) e descreve a base
+├── 02_validacao_cruzada.R         ← CV 5-fold × 2 dos 4 modelos
+├── 03_comparacao.R                ← objetivos 2 e 3 + comparação Pima vs. CDC
+└── 04_interpretabilidade.R        ← odds ratios, árvore, importância das variáveis
+resultados/cdc/tabelas/, figuras/  ← mesmas numerações do Pima (01_, 02_, 03_, 04_)
+```
+
+Todos os objetos do CDC têm nomes próprios (`cdc`, `res_cdc`, `MODELOS_CDC`, `DIR_CDC_*`...). Por isso, as duas análises podem rodar na mesma sessão do R sem uma apagar a outra.
+
+### O que muda em relação ao Pima (e por quê)
+
+| O quê | Pima | CDC | Por quê |
+|---|---|---|---|
+| Validação cruzada | 10-fold × 5 | **5-fold × 2** | Com 253 mil pessoas, 10 × 5 levaria horas. Cada fold de teste já tem ~50 mil pessoas, então a variação entre folds é pequena. |
+| Random forest | pacote `randomForest` | pacote **`ranger`** | Mesmo algoritmo (500 árvores), mas roda em paralelo. O `randomForest` seria lento demais nessa base. |
+| Estratégias de faltantes | 4 | **nenhuma** | A base não tem valores faltantes. O objetivo 4 não se aplica. |
+| Métricas | 7 | 7 + **AUC-PR** + métricas no **limiar = prevalência** | Com só 14% de positivos, o limiar 0,5 quase nunca é atingido e a sensibilidade despenca. A AUC-PR avalia melhor bases desbalanceadas. |
+| Descritiva | p-valor de Wilcoxon | **diferença padronizada (SMD)** | Com 253 mil pessoas, tudo dá p < 0,001, então o p-valor não diferencia nada. A SMD mede o **tamanho** da diferença. |
+| Odds ratios | por +1 desvio-padrão | por **unidade com sentido** (sim vs. não; IMC +5; dias +10; +1 faixa) | A maioria das variáveis é sim/não, e "1 desvio-padrão de uma variável sim/não" não tem leitura prática. |
+| Modelos salvos | `.rds` | não salva | A random forest ocuparia centenas de MB. |
+
+Os modelos, hiperparâmetros, semente, teste estatístico e critério de 0,05 são **os mesmos**.
+
+### Cuidados ao interpretar
+
+- **O alvo junta pré-diabetes e diabetes** (definição oficial do UCI). O texto do TCC precisa dizer isso.
+- **Associação não é causa.** Na base CDC, algumas associações vão "ao contrário". Um exemplo é "checou colesterol" aumentar a chance de diabetes: quem já tem o diagnóstico vai mais ao médico. O mesmo raciocínio vale para "consumo pesado de álcool" reduzir a chance. São dados de uma pesquisa feita num único momento.
+- **Linhas repetidas** (~24 mil) são normais: muitas respostas são sim/não, e várias pessoas diferentes dão exatamente as mesmas respostas. Não são erros e não foram removidas.
