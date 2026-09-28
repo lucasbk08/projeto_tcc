@@ -6,7 +6,6 @@
 # =============================================================================
 
 pacotes <- c(
-  "mlbench",       # contém o Pima Indians Diabetes Dataset
   "rpart",         # árvore de decisão (CART)
   "randomForest",  # random forest
   "gbm",           # gradient boosting

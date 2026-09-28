@@ -2,16 +2,18 @@
 # 01_dados.R — carga do Pima Indians Diabetes Dataset e análise exploratória
 # =============================================================================
 # Saídas:
-#   data/pima_bruto.csv
 #   resultados/tabelas/01_descritiva.csv
 #   resultados/tabelas/01_zeros_invalidos.csv
 #   resultados/figuras/01_zeros_invalidos.png
 #   resultados/figuras/01_distribuicoes.png
 # =============================================================================
 
-data(PimaIndiansDiabetes, package = "mlbench")
-pima <- PimaIndiansDiabetes
-write.csv(pima, file.path(DIR_DADOS, "pima_bruto.csv"), row.names = FALSE)
+# O Pima foi removido do pacote mlbench (versão 2.1-10), acompanhando sua
+# retirada do UCI Repository. Por isso o dataset fica versionado no próprio
+# projeto, em data/pima_bruto.csv (cópia exportada do mlbench 2.1-3.1).
+pima <- read.csv(file.path(DIR_DADOS, "pima_bruto.csv"))
+pima$diabetes <- factor(pima$diabetes, levels = c("neg", "pos"))
+stopifnot(nrow(pima) == 768, ncol(pima) == 9, !anyNA(pima))
 
 cat("\n== Dataset ==\n")
 cat("Pacientes:", nrow(pima), "| Variáveis preditoras:", ncol(pima) - 1, "\n")
