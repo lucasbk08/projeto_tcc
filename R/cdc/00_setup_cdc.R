@@ -111,4 +111,4 @@ calcular_metricas_cdc <- function(y, p, prevalencia_treino) {
 }
 
 # Números inteiros com ponto de milhar (253.680)
-fmt_n <- function(x) formatC(x, format = "d", big.mark = ".")
+fmt_n <- function(x) formatC(x, format = "d", big.mark = ".", decimal.mark = ",")

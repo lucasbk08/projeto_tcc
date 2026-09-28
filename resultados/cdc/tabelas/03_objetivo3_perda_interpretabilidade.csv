@@ -1,0 +1,3 @@
+"melhor_modelo","modelo_interpretavel","auc_melhor","auc_interpretavel","perda_auc","ic95_inf","ic95_sup","p_valor","perda_relevante","ic_exclui_relevante"
+"gbm","logistica",0.82927229331065,0.821959720751402,0.0073125725592479,0.00607364370244189,0.00855150141605391,3.0861694650486e-07,FALSE,TRUE
+"gbm","arvore",0.82927229331065,0.729809496768385,0.0994627965422643,0.088624926007861,0.110300667076668,6.53119649312355e-09,TRUE,FALSE
